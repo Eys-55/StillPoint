@@ -1,27 +1,65 @@
-import React, { useState } from 'react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import React, { useState, useEffect, useRef } from 'react';
+import { model } from './firebase.jsx';
 
 function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Initialize Gemini API client with provided API key
-  const genAI = new GoogleGenerativeAI("AIzaSyB3MRJUCPAHI-pGF0gAwj4qnaACGxpFJC8");
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  // Create a ref to store the chat session with built‑in memory
+  const chatSession = useRef(null);
+
+  useEffect(() => {
+    // Initialize the chat session with pre-populated history to demonstrate memory
+    chatSession.current = model.startChat({
+      history: [
+        {
+          role: "user",
+          parts: [{ text: "Hello, I have 2 dogs in my house." }],
+        },
+        {
+          role: "model",
+          parts: [{ text: "Great to meet you. What would you like to know?" }],
+        },
+      ],
+      generationConfig: { maxOutputTokens: 100 },
+    });
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
+    
+    // Append user's message to the chat history
     const userMessage = { sender: 'user', text: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setLoading(true);
+
     try {
-      const result = await model.generateContent(input);
-      const botText = result.response.text();
-      const botMessage = { sender: 'bot', text: botText };
-      setMessages(prev => [...prev, botMessage]);
+      // Use sendMessageStream to stream the bot's response and automatically track conversation context
+      const resultStream = await chatSession.current.sendMessageStream(input);
+      let botText = '';
+      // Add a temporary bot message for live updates
+      setMessages(prev => [...prev, { sender: 'bot', text: botText, temp: true }]);
+      
+      // Stream each chunk and update the last message
+      for await (const chunk of resultStream.stream) {
+        const chunkText = chunk.text();
+        botText += chunkText;
+        setMessages(prev => {
+          const newMessages = [...prev];
+          newMessages[newMessages.length - 1] = { sender: 'bot', text: botText, temp: true };
+          return newMessages;
+        });
+      }
+      
+      // Finalize the bot message after streaming is complete
+      setMessages(prev => {
+        const newMessages = [...prev];
+        newMessages[newMessages.length - 1] = { sender: 'bot', text: botText };
+        return newMessages;
+      });
     } catch (error) {
       const botMessage = { sender: 'bot', text: "Error: " + error.message };
       setMessages(prev => [...prev, botMessage]);

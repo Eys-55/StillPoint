@@ -1,11 +1,8 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyD65N5pZ4PHOoE_UO570TwDHO9jxV92y2I",
   authDomain: "mental-health-app-2f701.firebaseapp.com",
@@ -19,3 +16,9 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+
+// Initialize the Vertex AI service and the generative model for Gemini API with built‑in memory
+const vertexAI = getVertexAI(app);
+const model = getGenerativeModel(vertexAI, { model: "gemini-2.0-flash" });
+
+export { model };

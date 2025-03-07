@@ -1,6 +1,8 @@
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -21,4 +23,8 @@ const analytics = getAnalytics(app);
 const vertexAI = getVertexAI(app);
 const model = getGenerativeModel(vertexAI, { model: "gemini-2.0-flash" });
 
-export { model };
+// Initialize Firebase Auth and Firestore
+const auth = getAuth(app);
+const firestore = getFirestore(app);
+
+export { model, auth, firestore };

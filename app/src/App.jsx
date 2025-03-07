@@ -1,103 +1,68 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { model } from './firebase.jsx';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './Login.jsx';
+import { auth } from './firebase.jsx';
+import { signOut } from 'firebase/auth';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import ChatView from './ChatView.jsx';
+
+// ErrorBoundary component to catch and log errors in child components
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+    console.log("ErrorBoundary initialized");
+  }
+
+  componentDidCatch(error, info) {
+    console.error("ErrorBoundary caught an error:", error, info);
+    this.setState({ error });
+  }
+
+  render() {
+    if (this.state.error) {
+      return <div>Error occurred: {this.state.error.toString()}</div>;
+    }
+    return this.props.children;
+  }
+}
+
+function ProtectedRoute({ children }) {
+  const [user, loading] = useAuthState(auth);
+  console.log("ProtectedRoute rendered. Loading:", loading, "User:", user);
+  
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
 
 function App() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  // Create a ref to store the chat session with built‑in memory
-  const chatSession = useRef(null);
+  const [darkMode, setDarkMode] = useState(false);
+  const [user, loadingUser] = useAuthState(auth);
 
   useEffect(() => {
-    // Initialize the chat session with pre-populated history to demonstrate memory
-    chatSession.current = model.startChat({
-      history: [
-        {
-          role: "user",
-          parts: [{ text: "Hello, I have 2 dogs in my house." }],
-        },
-        {
-          role: "model",
-          parts: [{ text: "Great to meet you. What would you like to know?" }],
-        },
-      ],
-      generationConfig: { maxOutputTokens: 100 },
-    });
-  }, []);
+    document.body.setAttribute("data-bs-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    
-    // Append user's message to the chat history
-    const userMessage = { sender: 'user', text: input };
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setLoading(true);
-
+  const handleLogout = async () => {
     try {
-      // Use sendMessageStream to stream the bot's response and automatically track conversation context
-      const resultStream = await chatSession.current.sendMessageStream(input);
-      let botText = '';
-      // Add a temporary bot message for live updates
-      setMessages(prev => [...prev, { sender: 'bot', text: botText, temp: true }]);
-      
-      // Stream each chunk and update the last message
-      for await (const chunk of resultStream.stream) {
-        const chunkText = chunk.text();
-        botText += chunkText;
-        setMessages(prev => {
-          const newMessages = [...prev];
-          newMessages[newMessages.length - 1] = { sender: 'bot', text: botText, temp: true };
-          return newMessages;
-        });
-      }
-      
-      // Finalize the bot message after streaming is complete
-      setMessages(prev => {
-        const newMessages = [...prev];
-        newMessages[newMessages.length - 1] = { sender: 'bot', text: botText };
-        return newMessages;
-      });
-    } catch (error) {
-      const botMessage = { sender: 'bot', text: "Error: " + error.message };
-      setMessages(prev => [...prev, botMessage]);
+      await signOut(auth);
+    } catch (err) {
+      console.error("Error signing out:", err);
     }
-    setLoading(false);
   };
 
   return (
-    <div className="container my-5">
-      <h1 className="mb-4 text-center">Chat App</h1>
-      <div className="card">
-        <div className="card-body" style={{ height: '400px', overflowY: 'auto' }}>
-          {messages.map((msg, index) => (
-            <div key={index} className={`mb-2 text-${msg.sender === 'user' ? 'end' : 'start'}`}>
-              <span className={`badge bg-${msg.sender === 'user' ? 'primary' : 'secondary'}`}>
-                {msg.sender === 'user' ? 'You' : 'Bot'}
-              </span>
-              <p className="mt-1">{msg.text}</p>
-            </div>
-          ))}
-          {loading && <div className="text-center">Loading...</div>}
-        </div>
-      </div>
-      <form onSubmit={handleSubmit} className="mt-3">
-        <div className="input-group">
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Type your message..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <button className="btn btn-primary" type="submit" disabled={loading}>
-            Send
-          </button>
-        </div>
-      </form>
-    </div>
+    <ErrorBoundary>
+      <BrowserRouter>
+        {/* Header removed; its functionality is now moved to Sidebar */}
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/chat" element={<ProtectedRoute><ChatView darkMode={darkMode} setDarkMode={setDarkMode} /></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/chat" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

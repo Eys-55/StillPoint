@@ -4,7 +4,7 @@ import Login from './Login.jsx';
 import { auth } from './firebase.jsx';
 import { signOut } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import ChatView from './ChatView.jsx';
+import Chat from './Chat.jsx';
 
 // ErrorBoundary component to catch and log errors in child components
 class ErrorBoundary extends React.Component {
@@ -53,10 +53,9 @@ function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        {/* Header removed; its functionality is now moved to Sidebar */}
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/chat" element={<ProtectedRoute><ChatView darkMode={darkMode} setDarkMode={setDarkMode} /></ProtectedRoute>} />
+          <Route path="/chat" element={<ProtectedRoute><Chat darkMode={darkMode} setDarkMode={setDarkMode} /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/chat" replace />} />
         </Routes>
       </BrowserRouter>

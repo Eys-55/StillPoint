@@ -11,7 +11,6 @@ class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { error: null };
-    console.log("ErrorBoundary initialized");
   }
 
   componentDidCatch(error, info) {
@@ -29,7 +28,6 @@ class ErrorBoundary extends React.Component {
 
 function ProtectedRoute({ children }) {
   const [user, loading] = useAuthState(auth);
-  console.log("ProtectedRoute rendered. Loading:", loading, "User:", user);
   
   if (loading) return <div>Loading...</div>;
   if (!user) return <Navigate to="/login" replace />;

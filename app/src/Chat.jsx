@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { model, auth, firestore } from './firebase.jsx';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import prompts from './prompts.js'; // Import the system prompt
 
 function Chat({ conversationId }) {
   const [messages, setMessages] = useState([]);
@@ -14,38 +15,33 @@ function Chat({ conversationId }) {
   useEffect(() => {
     if (!conversationId) return;
     async function loadChat() {
-      console.log("Loading conversation history for ID:", conversationId);
       const conversationDoc = await getDoc(conversationDocRef);
       let initialHistory;
       if (conversationDoc.exists()) {
-        console.log("Conversation history found in Firestore");
         initialHistory = conversationDoc.data().messages;
         setMessages(initialHistory);
       } else {
-        console.log("No conversation history found. Initializing new conversation.");
-        initialHistory = [
-          { role: 'user', text: "Hello, I have 2 dogs in my house." },
-          { role: 'bot', text: "Great to meet you. What would you like to know?" },
-        ];
+        initialHistory = [];
         setMessages(initialHistory);
         await setDoc(conversationDocRef, { messages: initialHistory, title: "New Conversation" });
       }
-      console.log("Initializing chat session with history");
-      chatSession.current = model.startChat({
-        history: initialHistory.map(msg => ({
+      // Always prepend the current system prompt from prompts.js to guide the AI's behavior
+      const formattedHistory = [
+        ...initialHistory.map(msg => ({
           role: msg.role === 'user' ? 'user' : 'model',
           parts: [{ text: msg.text }],
-        })),
+        }))
+      ];
+      chatSession.current = model.startChat({
+        history: formattedHistory,
         generationConfig: { maxOutputTokens: 100 },
       });
-      console.log("Chat session initialized:", chatSession.current);
     }
     loadChat();
-  }, [conversationId, conversationDocRef]);
+  }, [conversationId, conversationDocRef, prompts.system]); // Reinitialize when prompts.system changes
 
   const saveChat = async (newMessages) => {
     if (!conversationDocRef) return;
-    console.log("Saving conversation history:", newMessages);
     await updateDoc(conversationDocRef, { messages: newMessages });
   };
 
@@ -53,7 +49,6 @@ function Chat({ conversationId }) {
     e.preventDefault();
     if (!input.trim() || !conversationDocRef) return;
 
-    console.log("User submitted message:", input);
     const userMessage = { role: 'user', text: input };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
@@ -89,7 +84,6 @@ function Chat({ conversationId }) {
         return msgs;
       });
     } catch (error) {
-      console.error("Error in handleSubmit:", error);
       const errorMessage = { role: 'bot', text: "Error: " + error.message };
       setMessages(prev => {
         const msgs = [...prev, errorMessage];

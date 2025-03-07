@@ -34,7 +34,7 @@ function Chat({ conversationId }) {
       ];
       chatSession.current = model.startChat({
         history: formattedHistory,
-        generationConfig: { maxOutputTokens: 100 },
+        generationConfig: { maxOutputTokens: 500 },
       });
     }
     loadChat();

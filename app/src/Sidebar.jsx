@@ -3,12 +3,14 @@ import { firestore, auth } from './firebase.jsx';
 import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { signOut } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 
 function Sidebar({ onSelectConversation, activeConversationId, darkMode, setDarkMode, isCollapsed, setIsCollapsed }) {
   const [conversations, setConversations] = useState([]);
   const [user, loading] = useAuthState(auth);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [hoveredDropdown, setHoveredDropdown] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (loading || !user) return;
@@ -153,7 +155,13 @@ function Sidebar({ onSelectConversation, activeConversationId, darkMode, setDark
       </div>
       <div className="mt-auto pt-3 border-top">
         <div className="d-flex justify-content-between align-items-center">
-          <span className="fw-bold text-truncate" title={user.email}>{user.email}</span>
+          <button
+            className="btn btn-link p-0 text-truncate"
+            onClick={() => navigate('/summaries')}
+            title={user.email}
+          >
+            <span className="fw-bold">{user.email}</span>
+          </button>
           <div className="d-flex gap-2">
             <button
               className="btn btn-outline-secondary btn-sm"

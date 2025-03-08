@@ -4,6 +4,8 @@ import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
 import prompts from './prompts.js';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import Sidebar from './Sidebar.jsx';
+import Header from './Header.jsx';
+import { useNavigate } from 'react-router-dom';
 
 function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversationId, isSidebarCollapsed, setIsSidebarCollapsed }) {
   const [messages, setMessages] = useState([]);
@@ -11,6 +13,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
   const [loading, setLoading] = useState(false);
   const chatSession = useRef(null);
   const user = auth.currentUser;
+  const navigate = useNavigate();
 
   const vertexAI = getVertexAI(app);
   const model = getGenerativeModel(vertexAI, {
@@ -106,69 +109,86 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
     setLoading(false);
   };
 
+  const handleToggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
+  const handleSummarize = () => {
+    if (!activeConversationId) return;
+    navigate('/summaries', { state: { conversationId: activeConversationId, messages: messages } });
+  };
+
   return (
-    <div style={{ display: 'flex' }}>
-      <Sidebar
-        onSelectConversation={setActiveConversationId}
-        activeConversationId={activeConversationId}
+    <>
+      <Header
+        mode="chat"
+        onToggleSidebar={handleToggleSidebar}
+        onSummarize={handleSummarize}
         darkMode={darkMode}
-        setDarkMode={setDarkMode}
-        isCollapsed={isSidebarCollapsed}
-        setIsCollapsed={setIsSidebarCollapsed}
       />
-      <div
-        className="flex-grow-1"
-        style={{
-          marginLeft: isSidebarCollapsed ? '0px' : '260px',
-          transition: 'margin-left 0.3s ease',
-          position: 'relative'
-        }}
-      >
-        <div className="container-fluid p-3">
-          {!activeConversationId ? (
-            <h2 className="text-center">Please select a conversation from the sidebar or create a new one.</h2>
-          ) : (
-            <>
-              <div style={{ height: 'calc(100vh - 250px)', overflowY: 'auto' }}>
-                {messages.map((msg, index) => (
-                  msg.role === 'user' ? (
-                    <div key={index} className="mb-2 text-end">
-                      <div className="d-inline-block p-2 bg-primary text-white rounded">
-                        {msg.text}
+      <div style={{ display: 'flex' }}>
+        <Sidebar
+          onSelectConversation={setActiveConversationId}
+          activeConversationId={activeConversationId}
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
+        />
+        <div
+          className="flex-grow-1"
+          style={{
+            marginLeft: isSidebarCollapsed ? '0px' : '260px',
+            transition: 'margin-left 0.3s ease',
+            position: 'relative'
+          }}
+        >
+          <div className="container-fluid p-3">
+            {!activeConversationId ? (
+              <h2 className="text-center">Please select a conversation from the sidebar or create a new one.</h2>
+            ) : (
+              <>
+                <div style={{ height: 'calc(100vh - 250px)', overflowY: 'auto' }}>
+                  {messages.map((msg, index) => (
+                    msg.role === 'user' ? (
+                      <div key={index} className="mb-2 text-end">
+                        <div className="d-inline-block p-2 bg-primary text-white rounded">
+                          {msg.text}
+                        </div>
                       </div>
-                    </div>
-                  ) : (
-                    <div key={index} className="mb-2 text-start">
-                      <div>
-                        {msg.text}
+                    ) : (
+                      <div key={index} className="mb-2 text-start">
+                        <div>
+                          {msg.text}
+                        </div>
                       </div>
+                    )
+                  ))}
+                  {loading && <div className="text-center">Loading...</div>}
+                </div>
+                <div className="p-3 mt-3">
+                  <form onSubmit={handleSubmit}>
+                    <div className="input-group">
+                      <textarea
+                        className="form-control rounded"
+                        placeholder="Type your message..."
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        style={{ minHeight: '80px', maxHeight: '200px', resize: 'vertical', overflowY: 'auto' }}
+                        wrap="soft"
+                      ></textarea>
+                      <button className="btn btn-primary" type="submit" disabled={loading}>
+                        <i className="bi bi-arrow-up"></i>
+                      </button>
                     </div>
-                  )
-                ))}
-                {loading && <div className="text-center">Loading...</div>}
-              </div>
-              <div className="p-3 mt-3">
-                <form onSubmit={handleSubmit}>
-                  <div className="input-group">
-                    <textarea
-                      className="form-control rounded"
-                      placeholder="Type your message..."
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      style={{ minHeight: '80px', maxHeight: '200px', resize: 'vertical', overflowY: 'auto' }}
-                      wrap="soft"
-                    ></textarea>
-                    <button className="btn btn-primary" type="submit" disabled={loading}>
-                      <i className="bi bi-arrow-up"></i>
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </>
-          )}
+                  </form>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

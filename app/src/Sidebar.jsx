@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { firestore, auth } from './firebase.jsx';
-import { collection, query, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { signOut } from 'firebase/auth';
 
 function Sidebar({ onSelectConversation, activeConversationId, darkMode, setDarkMode, isCollapsed, setIsCollapsed }) {
   const [conversations, setConversations] = useState([]);
   const [user, loading] = useAuthState(auth);
-  // States for custom dropdown management
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [hoveredDropdown, setHoveredDropdown] = useState(null);
 
@@ -25,7 +24,6 @@ function Sidebar({ onSelectConversation, activeConversationId, darkMode, setDark
     return () => unsubscribe();
   }, [user, loading]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest('.conversation-dropdown')) {
@@ -38,14 +36,18 @@ function Sidebar({ onSelectConversation, activeConversationId, darkMode, setDark
 
   const handleNewConversation = async () => {
     if (!user) return;
-    const conversationsRef = collection(firestore, 'users', user.uid, 'conversations');
-    const newConversation = {
-      title: "New Conversation",
-      messages: [],
-      createdAt: serverTimestamp()
-    };
-    const docRef = await addDoc(conversationsRef, newConversation);
-    onSelectConversation(docRef.id);
+    try {
+      const conversationsRef = collection(firestore, 'users', user.uid, 'conversations');
+      const newConversation = {
+        title: "New Conversation",
+        messages: [],
+        createdAt: serverTimestamp()
+      };
+      const docRef = await addDoc(conversationsRef, newConversation);
+      onSelectConversation(docRef.id);
+    } catch (err) {
+      console.error("Error creating new conversation:", err);
+    }
   };
 
   const handleRename = async (convId) => {

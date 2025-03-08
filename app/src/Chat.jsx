@@ -18,6 +18,7 @@ function Chat({ darkMode, setDarkMode }) {
   const vertexAI = getVertexAI(app);
   const model = getGenerativeModel(vertexAI, {
     model: "gemini-2.0-flash",
+    geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY,
     systemInstruction: {
       parts: [
         { text: prompts.system }
@@ -140,42 +141,48 @@ function Chat({ darkMode, setDarkMode }) {
             <i className="bi bi-chevron-double-left"></i>
           </button>
         )}
-        <div className="container my-5">
-          <div className="mx-auto" style={{ maxWidth: '600px' }}>
-            {!activeConversationId ? (
-              <h2 className="text-center">Please select a conversation from the sidebar or create a new one.</h2>
-            ) : (
-              <>
-                <div className="card">
-                  <div className="card-body" style={{ height: '400px', overflowY: 'auto' }}>
-                    {messages.map((msg, index) => (
-                      <div key={index} className={`mb-2 text-${msg.role === 'user' ? 'end' : 'start'}`}>
-                        <span className={`badge bg-${msg.role === 'user' ? 'primary' : 'secondary'}`}>
-                          {msg.role === 'user' ? 'You' : 'Bot'}
-                        </span>
-                        <p className="mt-1">{msg.text}</p>
+        <div className="container-fluid p-3">
+          {!activeConversationId ? (
+            <h2 className="text-center">Please select a conversation from the sidebar or create a new one.</h2>
+          ) : (
+            <>
+              <div style={{ height: 'calc(100vh - 250px)', overflowY: 'auto' }}>
+                  {messages.map((msg, index) => (
+                    msg.role === 'user' ? (
+                      <div key={index} className="mb-2 text-end">
+                        <div className="d-inline-block p-2 bg-primary text-white rounded">
+                          {msg.text}
+                        </div>
                       </div>
-                    ))}
-                    {loading && <div className="text-center">Loading...</div>}
-                  </div>
-                </div>
-                <form onSubmit={handleSubmit} className="mt-3">
+                    ) : (
+                      <div key={index} className="mb-2 text-start">
+                        <div>
+                          {msg.text}
+                        </div>
+                      </div>
+                    )
+                  ))}
+                  {loading && <div className="text-center">Loading...</div>}
+              </div>
+              <div className="p-3 mt-3">
+                <form onSubmit={handleSubmit}>
                   <div className="input-group">
-                    <input
-                      type="text"
-                      className="form-control"
+<textarea
+                      className="form-control rounded"
                       placeholder="Type your message..."
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
-                    />
+                      style={{ minHeight: '80px', maxHeight: '200px', resize: 'vertical', overflowY: 'auto' }}
+                      wrap="soft"
+                    ></textarea>
                     <button className="btn btn-primary" type="submit" disabled={loading}>
-                      Send
+                      <i className="bi bi-arrow-up"></i>
                     </button>
                   </div>
                 </form>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

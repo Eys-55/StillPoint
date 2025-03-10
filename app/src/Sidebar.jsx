@@ -91,7 +91,7 @@ function Sidebar({ onSelectConversation, activeConversationId, darkMode, setDark
 
   if (loading) {
     return (
-      <div className={`position-fixed min-vh-100 p-3 shadow ${bgClass}`} style={{ width: '250px', left: 0, top: 0, transition: 'width 0.3s ease' }}>
+        <div className={`position-absolute ${darkMode ? 'bg-dark text-light' : ''} shadow`} style={{ top: 'calc(100% + 5px)', right: 0, zIndex: 1000, padding: '0.5rem' }}>
         <div>Loading...</div>
       </div>
     );
@@ -132,14 +132,14 @@ function Sidebar({ onSelectConversation, activeConversationId, darkMode, setDark
                 <div className="conversation-dropdown" style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
-                    className="btn btn-link p-0"
+                    className="btn btn-link p-0 text-decoration-none"
                     onClick={(e) => { e.stopPropagation(); toggleDropdown(conv.id); }}
                     title="Options"
                   >
                     ...
                   </button>
                   {openDropdown === conv.id && (
-                    <div className="position-absolute bg-white border shadow" style={{ top: '100%', right: 0, zIndex: 1000 }}>
+                    <div className={`position-absolute ${darkMode ? 'bg-dark text-light border border-secondary' : 'bg-white border'} shadow`} style={{ top: 'calc(100% + 5px)', right: 0, zIndex: 1000, padding: '0.5rem' }}>
                       <button type="button" className="dropdown-item" onClick={() => { handleRename(conv.id); setOpenDropdown(null); }}>Rename</button>
                       <button type="button" className="dropdown-item" onClick={() => { handleDelete(conv.id); setOpenDropdown(null); }}>Delete</button>
                     </div>

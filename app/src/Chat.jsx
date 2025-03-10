@@ -12,11 +12,103 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
   const [bundledSummaries, setBundledSummaries] = useState('');
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  
+  // New state for voice recording
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const recordingIntervalRef = useRef(null);
+
   const chatSession = useRef(null);
   const user = auth.currentUser;
   const navigate = useNavigate();
-
   const vertexAI = getVertexAI(app);
+
+  // Helper function to format recording time
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  // Start voice recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
+      recorder.ondataavailable = e => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+      recorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop());
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        transcribeAudio(audioBlob);
+      };
+      recorder.start(1000);
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+    }
+  };
+
+  // Stop voice recording
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      clearInterval(recordingIntervalRef.current);
+      setIsRecording(false);
+    }
+  };
+
+  // Handle voice button click: toggle recording
+  const handleVoiceButton = () => {
+    if (!isRecording) {
+      startRecording();
+    } else {
+      stopRecording();
+    }
+  };
+
+  // Transcribe audio using Whisper API
+  const transcribeAudio = async (audioBlob) => {
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'audio.mp3');
+    formData.append('model', 'whisper-1');
+    // Removed response_format parameter to get default JSON response
+    try {
+      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_WHISPER_API_KEY}`
+        },
+        body: formData
+      });
+      if (!response.ok) {
+        throw new Error('Transcription failed');
+      }
+      const data = await response.json();
+      console.log("Transcription:", data.text);
+      setInput(prevInput => prevInput ? prevInput + "\n" + data.text : data.text);
+    } catch (err) {
+      console.error("Error transcribing audio:", err);
+    }
+  };
+
+  useEffect(() => {
+    async function fetchSummaries() {
+      const summaries = await getAllSummaries();
+      setBundledSummaries(summaries);
+    }
+    fetchSummaries();
+  }, []);
 
   const getAllSummaries = async () => {
     const user = auth.currentUser;
@@ -31,14 +123,6 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
     });
     return prompts.disclaimer + "\n" + summaries.join('\n');
   };
-
-  useEffect(() => {
-    async function fetchSummaries() {
-      const summaries = await getAllSummaries();
-      setBundledSummaries(summaries);
-    }
-    fetchSummaries();
-  }, []);
 
   const model = useMemo(() => {
     const payload = {
@@ -91,17 +175,14 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim() || !conversationDocRef) return;
-
     const userMessage = { role: 'user', text: input };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     await saveChat(updatedMessages);
-
     const messageToSend = input;
     setInput('');
     console.log("Sending message to bot:", messageToSend);
     setLoading(true);
-
     try {
       const resultStream = await chatSession.current.sendMessageStream(messageToSend);
       let botText = '';
@@ -110,7 +191,6 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
         saveChat(msgs);
         return msgs;
       });
-
       for await (const chunk of resultStream.stream) {
         const chunkText = chunk.text();
         botText += chunkText;
@@ -121,7 +201,6 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
           return msgs;
         });
       }
-
       setMessages(prev => {
         const msgs = [...prev];
         msgs[msgs.length - 1] = { role: 'bot', text: botText };
@@ -147,6 +226,15 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
     if (!activeConversationId) return;
     navigate('/summaries', { state: { conversationId: activeConversationId, messages: messages } });
   };
+
+  // Cleanup recording interval on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    };
+  }, []);
 
   return (
     <>
@@ -199,15 +287,24 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
                 <div className="p-3 mt-3">
                   <form onSubmit={handleSubmit}>
                     <div className="input-group">
+                      <button type="button" onClick={handleVoiceButton} className="btn btn-secondary">
+                        {isRecording ? <i className="bi bi-check"></i> : <i className="bi bi-mic"></i>}
+                      </button>
+                      {isRecording && (
+                        <span className="align-self-center ms-2" style={{ padding: '0.5rem' }}>
+                          Recording: {formatTime(recordingTime)}
+                        </span>
+                      )}
                       <textarea
                         className="form-control rounded"
                         placeholder="Type your message..."
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
+                        disabled={loading || isRecording}
                         style={{ minHeight: '80px', maxHeight: '200px', resize: 'vertical', overflowY: 'auto' }}
                         wrap="soft"
                       ></textarea>
-                      <button className="btn btn-primary" type="submit" disabled={loading}>
+<button className="btn btn-primary" type="submit" disabled={loading || isRecording}>
                         <i className="bi bi-arrow-up"></i>
                       </button>
                     </div>

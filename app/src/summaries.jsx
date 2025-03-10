@@ -4,7 +4,7 @@ import Header from './Header.jsx';
 import prompts from './prompts.js';
 import { getVertexAI, getGenerativeModel } from 'firebase/vertexai';
 import { app, auth, firestore } from './firebase.jsx';
-import { doc, getDoc, updateDoc, collection, query, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, getDocs } from 'firebase/firestore';
 
 function Summaries() {
   const location = useLocation();
@@ -14,13 +14,14 @@ function Summaries() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [messages, setMessages] = useState(initialMessages || []);
-  const [summariesList, setSummariesList] = useState([]);
+  const [bundledSummaries, setBundledSummaries] = useState([]); // changed to array
+  const [loadingBundled, setLoadingBundled] = useState(false);
+  const [errorBundled, setErrorBundled] = useState('');
 
   const handleBack = () => {
     navigate('/chat');
   };
 
-  // For specific conversation view
   const fetchConversationMessages = async () => {
     if (conversationId && auth.currentUser) {
       const convRef = doc(firestore, 'users', auth.currentUser.uid, 'conversations', conversationId);
@@ -69,38 +70,49 @@ function Summaries() {
     setLoading(false);
   };
 
-  // When viewing a specific conversation, auto-generate summary.
+  // Modified getAllSummaries to return an array of summaries without joining them into one string.
+  const getAllSummaries = async () => {
+    const user = auth.currentUser;
+    if (!user) return [];
+    const convRef = collection(firestore, 'users', user.uid, 'conversations');
+    const q = query(convRef);
+    const snapshot = await getDocs(q);
+    const summaries = [];
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.summary) summaries.push(data.summary);
+    });
+    return summaries;
+  };
+
   useEffect(() => {
     if (conversationId) {
       generateSummary();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
 
-  // When no conversationId, fetch all summaries.
   useEffect(() => {
     if (!conversationId && auth.currentUser) {
-      const convCollection = collection(firestore, 'users', auth.currentUser.uid, 'conversations');
-      const q = query(convCollection);
-      const unsubscribe = onSnapshot(q, snapshot => {
-        const list = [];
-        snapshot.forEach(docSnap => {
-          const data = docSnap.data();
-          list.push({
-            id: docSnap.id,
-            title: data.title || docSnap.id,
-            summary: data.summary || 'No summary available'
-          });
+      setLoadingBundled(true);
+      getAllSummaries()
+        .then(result => {
+          setBundledSummaries(result);
+          setLoadingBundled(false);
+        })
+        .catch(err => {
+          setErrorBundled("Error fetching bundled summaries: " + err.message);
+          setLoadingBundled(false);
         });
-        setSummariesList(list);
-      });
-      return () => unsubscribe();
     }
   }, [conversationId]);
 
   return (
     <div>
-      <Header mode="summaries" onBack={handleBack} darkMode={false} />
+      <Header
+        mode="summaries"
+        onBack={handleBack}
+        darkMode={document.body.getAttribute("data-bs-theme") === "dark"}
+      />
       <div className="container my-4">
         {conversationId ? (
           <>
@@ -126,17 +138,20 @@ function Summaries() {
         ) : (
           <>
             <h2 className="mb-3">All Conversation Summaries</h2>
-            {summariesList.length === 0 ? (
-              <div>No summaries available.</div>
-            ) : (
-              summariesList.map(conv => (
-                <div key={conv.id} className="card mb-3">
+            {loadingBundled ? (
+              <div className="text-center">Loading bundled summaries...</div>
+            ) : errorBundled ? (
+              <div className="alert alert-danger">{errorBundled}</div>
+            ) : bundledSummaries.length > 0 ? (
+              bundledSummaries.map((sum, index) => (
+                <div key={index} className="card mb-3">
                   <div className="card-body">
-                    <h5 className="card-title">{conv.title}</h5>
-                    <p className="card-text">{conv.summary}</p>
+                    <p className="card-text">{sum}</p>
                   </div>
                 </div>
               ))
+            ) : (
+              <div>No summaries available.</div>
             )}
           </>
         )}

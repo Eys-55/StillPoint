@@ -8,8 +8,12 @@ import { useNavigate } from 'react-router-dom';
 function Sidebar({ onSelectConversation, activeConversationId, darkMode, setDarkMode, isCollapsed, setIsCollapsed }) {
   const [conversations, setConversations] = useState([]);
   const [user, loading] = useAuthState(auth);
-  const [activeDropdown, setActiveDropdown] = useState(null);
-  const [hoveredDropdown, setHoveredDropdown] = useState(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState(null);
+  
+  const toggleDropdown = (convId) => {
+    setOpenDropdown(prev => (prev === convId ? null : convId));
+  };
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,7 +33,7 @@ function Sidebar({ onSelectConversation, activeConversationId, darkMode, setDark
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (!event.target.closest('.conversation-dropdown')) {
-        setActiveDropdown(null);
+        setOpenDropdown(null);
       }
     };
     document.addEventListener('click', handleClickOutside);
@@ -106,81 +110,93 @@ function Sidebar({ onSelectConversation, activeConversationId, darkMode, setDark
   }
 
   return (
-    <div className={`position-fixed min-vh-100 p-3 shadow ${bgClass} d-flex flex-column`} style={{ width: '250px', left: 0, top: 0, transition: 'width 0.3s ease', overflowY: 'auto' }}>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <button className="btn btn-link p-0" onClick={() => setIsCollapsed(true)}>
-          <i className="bi bi-chevron-double-left" style={{ fontSize: '1.2rem' }}></i>
-        </button>
-        <button className="btn btn-link p-0" onClick={handleNewConversation}>
-          <i className="bi bi-plus" style={{ fontSize: '1.2rem' }}></i>
-        </button>
-      </div>
-      <div>
-        {conversations.map(conv => (
-          <div
-            key={conv.id}
-            style={{ cursor: 'pointer', padding: '0.5rem 1rem', borderBottom: '1px solid rgba(0,0,0,0.1)' }}
-            onClick={() => onSelectConversation(conv.id)}
-          >
-            <div className="d-flex justify-content-between align-items-center">
-              <span>{conv.title ? conv.title : conv.id}</span>
-              <div className="conversation-dropdown" style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
-                <button
-                  type="button"
-                  className="btn btn-link p-0"
-                  style={{
-                    backgroundColor: hoveredDropdown === conv.id ? (darkMode ? '#555' : '#eee') : 'transparent',
-                    border: 'none',
-                    cursor: 'pointer'
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveDropdown(activeDropdown === conv.id ? null : conv.id);
-                  }}
-                  onMouseEnter={() => setHoveredDropdown(conv.id)}
-                  onMouseLeave={() => setHoveredDropdown(null)}
-                >
-                  <i className="bi bi-three-dots" style={{ fontSize: '1.2rem' }}></i>
-                </button>
-                {activeDropdown === conv.id && (
-                  <div className="dropdown-menu show" style={{ position: 'absolute', top: '100%', right: 0, display: 'block', zIndex: 1000 }}>
-                    <button className="dropdown-item" onClick={(e) => { e.stopPropagation(); handleRename(conv.id); setActiveDropdown(null); }}>Rename</button>
-                    <button className="dropdown-item" onClick={(e) => { e.stopPropagation(); handleDelete(conv.id); setActiveDropdown(null); }}>Delete</button>
-                  </div>
-                )}
+    <>
+      <div className={`position-fixed min-vh-100 p-3 shadow ${bgClass} d-flex flex-column`} style={{ width: '250px', left: 0, top: 0, transition: 'width 0.3s ease', overflowY: 'auto' }}>
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <button className="btn btn-link p-0" onClick={() => setIsCollapsed(true)}>
+            <i className="bi bi-chevron-double-left" style={{ fontSize: '1.2rem' }}></i>
+          </button>
+          <button className="btn btn-link p-0" onClick={handleNewConversation}>
+            <i className="bi bi-plus" style={{ fontSize: '1.2rem' }}></i>
+          </button>
+        </div>
+        <div>
+          {conversations.map(conv => (
+            <div
+              key={conv.id}
+              style={{ cursor: 'pointer', padding: '0.5rem 1rem', borderBottom: '1px solid rgba(0,0,0,0.1)' }}
+              onClick={() => onSelectConversation(conv.id)}
+            >
+              <div className="d-flex justify-content-between align-items-center">
+                <span>{conv.title ? conv.title : conv.id}</span>
+                <div className="conversation-dropdown" style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    className="btn btn-link p-0"
+                    onClick={(e) => { e.stopPropagation(); toggleDropdown(conv.id); }}
+                    title="Options"
+                  >
+                    ...
+                  </button>
+                  {openDropdown === conv.id && (
+                    <div className="position-absolute bg-white border shadow" style={{ top: '100%', right: 0, zIndex: 1000 }}>
+                      <button type="button" className="dropdown-item" onClick={() => { handleRename(conv.id); setOpenDropdown(null); }}>Rename</button>
+                      <button type="button" className="dropdown-item" onClick={() => { handleDelete(conv.id); setOpenDropdown(null); }}>Delete</button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
-      <div className="mt-auto pt-3 border-top">
-        <div className="d-flex justify-content-between align-items-center">
-          <button
-            className="btn btn-link p-0 text-truncate"
-            onClick={() => navigate('/summaries')}
-            title={user.email}
-          >
-            <span className="fw-bold">{user.email}</span>
-          </button>
-          <div className="d-flex gap-2">
+          ))}
+        </div>
+        <div className="mt-auto pt-3 border-top">
+          <div className="d-flex justify-content-between align-items-center">
             <button
-              className="btn btn-outline-secondary btn-sm"
-              onClick={() => setDarkMode(!darkMode)}
-              title="Toggle Dark Mode"
+              className="btn btn-link p-0 text-truncate"
+              onClick={() => setShowEmailModal(true)}
+              title={user.email}
             >
-              <i className={`bi ${darkMode ? 'bi-sun' : 'bi-moon'}`}></i>
+              <span className="fw-bold">{user.email}</span>
             </button>
-            <button
-              className="btn btn-outline-danger btn-sm"
-              onClick={handleLogout}
-              title="Logout"
-            >
-              <i className="bi bi-box-arrow-right"></i>
-            </button>
+            <div className="d-flex gap-2">
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      {showEmailModal && (
+        <>
+          <div className="modal-backdrop show"></div>
+          <div className="modal show d-block" tabIndex="-1" role="dialog">
+            <div className="modal-dialog modal-dialog-centered" role="document">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">{user.email}</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowEmailModal(false)}></button>
+                </div>
+                <div className="modal-body">
+                  <button className="btn btn-primary w-100 mb-2" onClick={() => { navigate('/summaries'); setShowEmailModal(false); }}>
+                    See Profile
+                  </button>
+                  <div className="form-check form-switch mb-2">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="darkModeSwitch"
+                      checked={darkMode}
+                      onChange={() => setDarkMode(!darkMode)}
+                    />
+                    <label className="form-check-label" htmlFor="darkModeSwitch">Dark Mode</label>
+                  </div>
+                  <button className="btn btn-danger w-100" onClick={() => { handleLogout(); setShowEmailModal(false); }}>
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 }
 

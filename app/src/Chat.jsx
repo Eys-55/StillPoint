@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { app, auth, firestore } from './firebase.jsx';
 import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
 import prompts from './prompts.js';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, getDocs } from 'firebase/firestore';
 import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import { useNavigate } from 'react-router-dom';
-import { getAllSummaries } from './summariesBundle';
 
 function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversationId, isSidebarCollapsed, setIsSidebarCollapsed }) {
   const [messages, setMessages] = useState([]);
@@ -19,6 +18,20 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
 
   const vertexAI = getVertexAI(app);
 
+  const getAllSummaries = async () => {
+    const user = auth.currentUser;
+    if (!user) return '';
+    const convRef = collection(firestore, 'users', user.uid, 'conversations');
+    const q = query(convRef);
+    const snapshot = await getDocs(q);
+    const summaries = [];
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.summary) summaries.push(data.summary);
+    });
+    return prompts.disclaimer + "\n" + summaries.join('\n');
+  };
+
   useEffect(() => {
     async function fetchSummaries() {
       const summaries = await getAllSummaries();
@@ -29,7 +42,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
 
   const model = useMemo(() => {
     const payload = {
-      model: "gemini-2.0-flash",
+      model: "gemini-2.0-flash-lite",
       geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY,
       systemInstruction: {
         parts: [
@@ -84,11 +97,13 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
     setMessages(updatedMessages);
     await saveChat(updatedMessages);
 
+    const messageToSend = input;
     setInput('');
+    console.log("Sending message to bot:", messageToSend);
     setLoading(true);
 
     try {
-      const resultStream = await chatSession.current.sendMessageStream(input);
+      const resultStream = await chatSession.current.sendMessageStream(messageToSend);
       let botText = '';
       setMessages(prev => {
         const msgs = [...prev, { role: 'bot', text: botText, temp: true }];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { app, auth, firestore } from './firebase.jsx';
 import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
 import prompts from './prompts.js';
@@ -6,9 +6,11 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import { useNavigate } from 'react-router-dom';
+import { getAllSummaries } from './summariesBundle';
 
 function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversationId, isSidebarCollapsed, setIsSidebarCollapsed }) {
   const [messages, setMessages] = useState([]);
+  const [bundledSummaries, setBundledSummaries] = useState('');
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const chatSession = useRef(null);
@@ -16,15 +18,28 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
   const navigate = useNavigate();
 
   const vertexAI = getVertexAI(app);
-  const model = getGenerativeModel(vertexAI, {
-    model: "gemini-2.0-flash",
-    geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY,
-    systemInstruction: {
-      parts: [
-        { text: prompts.system }
-      ]
+
+  useEffect(() => {
+    async function fetchSummaries() {
+      const summaries = await getAllSummaries();
+      setBundledSummaries(summaries);
     }
-  });
+    fetchSummaries();
+  }, []);
+
+  const model = useMemo(() => {
+    const payload = {
+      model: "gemini-2.0-flash",
+      geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY,
+      systemInstruction: {
+        parts: [
+          { text: `${prompts.system}\n\n${bundledSummaries}` }
+        ]
+      }
+    };
+    console.log("Payload passed to getGenerativeModel:", payload);
+    return getGenerativeModel(vertexAI, payload);
+  }, [bundledSummaries, vertexAI]);
 
   const conversationDocRef = activeConversationId
     ? doc(firestore, 'users', user.uid, 'conversations', activeConversationId)
@@ -53,7 +68,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
       });
     }
     loadChat();
-  }, [activeConversationId, conversationDocRef, prompts.system]);
+  }, [activeConversationId, conversationDocRef, model, prompts.system]);
 
   const saveChat = async (newMessages) => {
     if (!conversationDocRef) return;

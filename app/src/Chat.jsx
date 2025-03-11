@@ -126,7 +126,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
 
   const model = useMemo(() => {
     const payload = {
-      model: "gemini-2.0-flash-lite",
+      model: "gemini-2.0-flash",
       geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY,
       systemInstruction: {
         parts: [
@@ -286,27 +286,24 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
                 </div>
                 <div className="p-3 mt-3">
                   <form onSubmit={handleSubmit}>
-                    <div className="input-group">
-                      <button type="button" onClick={handleVoiceButton} className="btn btn-secondary">
-                        {isRecording ? <i className="bi bi-check"></i> : <i className="bi bi-mic"></i>}
-                      </button>
-                      {isRecording && (
-                        <span className="align-self-center ms-2" style={{ padding: '0.5rem' }}>
-                          Recording: {formatTime(recordingTime)}
-                        </span>
-                      )}
+                    <div className="d-flex align-items-stretch">
                       <textarea
                         className="form-control rounded"
                         placeholder="Type your message..."
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         disabled={loading || isRecording}
-                        style={{ minHeight: '80px', maxHeight: '200px', resize: 'vertical', overflowY: 'auto' }}
+                        style={{ minHeight: '60px', maxHeight: '200px', resize: 'none', overflowY: 'auto' }}
                         wrap="soft"
                       ></textarea>
-<button className="btn btn-primary" type="submit" disabled={loading || isRecording}>
-                        <i className="bi bi-arrow-up"></i>
-                      </button>
+                      <div className="d-flex align-items-center ms-2">
+                        <button type="button" onClick={handleVoiceButton} className="btn btn-outline-secondary btn-sm rounded-circle me-1">
+                          {isRecording ? <i className="bi bi-check"></i> : <i className="bi bi-mic"></i>}
+                        </button>
+                        <button className="btn btn-primary btn-sm rounded-circle" type="submit" disabled={loading || isRecording}>
+                          <i className="bi bi-arrow-up-circle-fill"></i>
+                        </button>
+                      </div>
                     </div>
                   </form>
                 </div>

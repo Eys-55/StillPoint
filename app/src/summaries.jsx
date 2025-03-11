@@ -11,10 +11,11 @@ function Summaries() {
   const navigate = useNavigate();
   const { conversationId, messages: initialMessages } = location.state || {};
   const [summary, setSummary] = useState('');
+  const [title, setTitle] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [messages, setMessages] = useState(initialMessages || []);
-  const [bundledSummaries, setBundledSummaries] = useState([]); // changed to array
+  const [bundledSummaries, setBundledSummaries] = useState([]);
   const [loadingBundled, setLoadingBundled] = useState(false);
   const [errorBundled, setErrorBundled] = useState('');
 
@@ -30,6 +31,9 @@ function Summaries() {
         const data = convDoc.data();
         if (data.summary) {
           setSummary(data.summary);
+        }
+        if (data.title) {
+          setTitle(data.title);
         }
         setMessages(data.messages);
         return data.messages;
@@ -56,13 +60,21 @@ function Summaries() {
         geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY,
       });
       const conversationText = convMessages.map(msg => `${msg.role}: ${msg.text}`).join('\n');
-      const inputPrompt = prompts.summarizer + "\n\nConversation:\n" + conversationText;
-      const result = await model.generateContent(inputPrompt);
-      const generatedSummary = result.response.text();
+      
+      // Generate combined title and summary
+      const combinedPrompt = prompts.summarizer + "\n\nConversation:\n" + conversationText;
+      const resultCombined = await model.generateContent(combinedPrompt);
+      const responseText = resultCombined.response.text();
+      const lines = responseText.split("\n").filter(line => line.trim() !== "");
+      const generatedTitle = lines[0].replace(/\*\*/g, '').trim();
+      const generatedSummary = lines.slice(1).join("\n").trim();
+
       setSummary(generatedSummary);
+      setTitle(generatedTitle);
+
       if (conversationId && auth.currentUser) {
         const convRef = doc(firestore, 'users', auth.currentUser.uid, 'conversations', conversationId);
-        await updateDoc(convRef, { summary: generatedSummary });
+        await updateDoc(convRef, { summary: generatedSummary, title: generatedTitle });
       }
     } catch (err) {
       setError("Error during summarization: " + err.message);
@@ -70,7 +82,18 @@ function Summaries() {
     setLoading(false);
   };
 
-  // Modified getAllSummaries to return an array of summaries without joining them into one string.
+  const saveSummary = async () => {
+    if (conversationId && auth.currentUser) {
+      try {
+        const convRef = doc(firestore, 'users', auth.currentUser.uid, 'conversations', conversationId);
+        await updateDoc(convRef, { summary: summary, title: title });
+        navigate('/chat');
+      } catch (err) {
+        setError("Error saving summary: " + err.message);
+      }
+    }
+  };
+
   const getAllSummaries = async () => {
     const user = auth.currentUser;
     if (!user) return [];
@@ -80,7 +103,9 @@ function Summaries() {
     const summaries = [];
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
-      if (data.summary) summaries.push(data.summary);
+      if (data.summary && data.title) {
+        summaries.push({ title: data.title, summary: data.summary });
+      }
     });
     return summaries;
   };
@@ -123,14 +148,22 @@ function Summaries() {
               <div className="alert alert-danger">{error}</div>
             ) : (
               <>
+                <input
+                  type="text"
+                  className="form-control mb-3"
+                  placeholder="Title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
                 <textarea
                   className="form-control mb-3"
                   rows="6"
+                  placeholder="Summary"
                   value={summary}
                   onChange={(e) => setSummary(e.target.value)}
                 ></textarea>
-                <button className="btn btn-primary" onClick={generateSummary}>
-                  Regenerate Summary
+                <button className="btn btn-primary" onClick={saveSummary}>
+                  Save
                 </button>
               </>
             )}
@@ -143,10 +176,11 @@ function Summaries() {
             ) : errorBundled ? (
               <div className="alert alert-danger">{errorBundled}</div>
             ) : bundledSummaries.length > 0 ? (
-              bundledSummaries.map((sum, index) => (
+              bundledSummaries.map((item, index) => (
                 <div key={index} className="card mb-3">
                   <div className="card-body">
-                    <p className="card-text">{sum}</p>
+                    <h5>{item.title}</h5>
+                    <p className="card-text">{item.summary}</p>
                   </div>
                 </div>
               ))

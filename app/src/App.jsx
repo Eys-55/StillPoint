@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Login from './Login.jsx';
-import Home from './home.jsx';
+import Home from './home/home.jsx';
 import { auth } from './firebase.jsx';
 import { signOut } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import Chat from './Chat.jsx';
 import Summaries from './summaries.jsx';
+import UserProfile from './home/user_profile.jsx';
+import Footer from './footer.jsx';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -92,8 +94,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <UserProfile />
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
+      <Footer darkMode={darkMode} setDarkMode={setDarkMode} />
     </ErrorBoundary>
   );
 }

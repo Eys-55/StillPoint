@@ -1,9 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversationTitle }) {
-  const navbarClass = darkMode
-    ? 'navbar navbar-dark bg-dark border-bottom'
-    : 'navbar navbar-light bg-light border-bottom';
+  // For home mode, use local state for dark toggle; otherwise, use the darkMode prop.
+  const [localDarkMode, setLocalDarkMode] = useState(mode === 'home' ? (document.body.getAttribute("data-bs-theme") === "dark") : darkMode);
+
+  useEffect(() => {
+    if (mode === 'home') {
+      setLocalDarkMode(document.body.getAttribute("data-bs-theme") === "dark");
+    } else {
+      setLocalDarkMode(darkMode);
+    }
+  }, [mode, darkMode]);
+
+  // For chat and other modes, use darkMode prop.
+  const effectiveDarkMode = mode === 'home' ? localDarkMode : darkMode;
+  const navbarClass = effectiveDarkMode ? 'navbar navbar-dark bg-dark border-bottom' : 'navbar navbar-light bg-light border-bottom';
+
+  const toggleDarkMode = () => {
+    const newTheme = effectiveDarkMode ? "light" : "dark";
+    document.body.setAttribute("data-bs-theme", newTheme);
+    setLocalDarkMode(!effectiveDarkMode);
+  };
 
   return (
     <nav className={navbarClass}>
@@ -12,17 +29,30 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
           <button className="btn btn-outline-secondary" onClick={onBack}>
             <i className="bi bi-arrow-left"></i>
           </button>
+        ) : mode === 'home' ? (
+          <div></div>
         ) : (
           <button className="btn btn-outline-secondary" onClick={onToggleSidebar}>
             <i className="bi bi-list"></i>
           </button>
         )}
-        <span className="navbar-brand mb-0 h1" style={{ fontSize: 'var(--header-font-size)' }}>{conversationTitle || "Mental Health Conversation"}</span>
-        {mode === 'chat' && (
-          <button className="btn btn-outline-primary" onClick={onSummarize}>
-            <i className="bi bi-check2-square"></i>
+        <span className="navbar-brand mb-0 h1" style={{ fontSize: 'var(--header-font-size)' }}>
+          {conversationTitle || (mode === 'home' ? "Mental Health App" : "Mental Health Conversation")}
+        </span>
+        {mode === 'chat' ? (
+          <>
+            <button className="btn btn-outline-primary me-2" onClick={onSummarize}>
+              <i className="bi bi-check2-square"></i>
+            </button>
+            <button className="btn btn-outline-secondary" onClick={toggleDarkMode}>
+              {effectiveDarkMode ? <i className="bi bi-sun"></i> : <i className="bi bi-moon"></i>}
+            </button>
+          </>
+        ) : mode === 'home' ? (
+          <button className="btn btn-outline-secondary" onClick={toggleDarkMode}>
+            {effectiveDarkMode ? <i className="bi bi-sun"></i> : <i className="bi bi-moon"></i>}
           </button>
-        )}
+        ) : null}
       </div>
     </nav>
   );

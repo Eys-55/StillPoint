@@ -2,146 +2,58 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { app, auth, firestore } from './firebase.jsx';
 import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
 import prompts from './prompts.js';
-import { doc, getDoc, setDoc, updateDoc, collection, query, getDocs } from 'firebase/firestore';
-import Sidebar from './Sidebar.jsx';
+import { doc, getDoc, setDoc, updateDoc, collection, query, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import Footer from './footer.jsx';
 import Header from './Header.jsx';
 import { useNavigate } from 'react-router-dom';
 
-function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversationId, isSidebarCollapsed, setIsSidebarCollapsed }) {
+function Chat({ darkMode, setDarkMode }) {
   const [messages, setMessages] = useState([]);
   const [bundledSummaries, setBundledSummaries] = useState('');
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  // New state for voice recording
+  const [activeConversationId, setActiveConversationId] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [conversationLoaded, setConversationLoaded] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const recordingIntervalRef = useRef(null);
-
   const chatSession = useRef(null);
-  const user = auth.currentUser;
   const navigate = useNavigate();
   const vertexAI = getVertexAI(app);
 
-  // Helper function to format recording time
+  // Helper function for formatting recording time
   function formatTime(seconds) {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   }
 
-  // Start voice recording
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks = [];
-      recorder.ondataavailable = e => {
-        if (e.data.size > 0) {
-          chunks.push(e.data);
-        }
-      };
-      recorder.onstop = () => {
-        stream.getTracks().forEach(track => track.stop());
-        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-        transcribeAudio(audioBlob);
-      };
-      recorder.start(1000);
-      setMediaRecorder(recorder);
-      setIsRecording(true);
-      setRecordingTime(0);
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    } catch (err) {
-      console.error("Error accessing microphone:", err);
-    }
-  };
-
-  // Stop voice recording
-  const stopRecording = () => {
-    if (mediaRecorder && isRecording) {
-      mediaRecorder.stop();
-      clearInterval(recordingIntervalRef.current);
-      setIsRecording(false);
-    }
-  };
-
-  // Handle voice button click: toggle recording
-  const handleVoiceButton = () => {
-    if (!isRecording) {
-      startRecording();
-    } else {
-      stopRecording();
-    }
-  };
-
-  // Transcribe audio using Whisper API
-  const transcribeAudio = async (audioBlob) => {
-    const formData = new FormData();
-    formData.append('file', audioBlob, 'audio.mp3');
-    formData.append('model', 'whisper-1');
-    // Removed response_format parameter to get default JSON response
-    try {
-      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_WHISPER_API_KEY}`
-        },
-        body: formData
-      });
-      if (!response.ok) {
-        throw new Error('Transcription failed');
-      }
-      const data = await response.json();
-      console.log("Transcription:", data.text);
-      setInput(prevInput => prevInput ? prevInput + "\n" + data.text : data.text);
-    } catch (err) {
-      console.error("Error transcribing audio:", err);
-    }
-  };
-
+  // Auto-create a new conversation if none exists
   useEffect(() => {
-    async function fetchSummaries() {
-      const summaries = await getAllSummaries();
-      setBundledSummaries(summaries);
-    }
-    fetchSummaries();
-  }, []);
-
-  const getAllSummaries = async () => {
-    const user = auth.currentUser;
-    if (!user) return '';
-    const convRef = collection(firestore, 'users', user.uid, 'conversations');
-    const q = query(convRef);
-    const snapshot = await getDocs(q);
-    const summaries = [];
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      if (data.summary) summaries.push(data.summary);
-    });
-    return prompts.disclaimer + "\n" + summaries.join('\n');
-  };
-
-  const model = useMemo(() => {
-    const payload = {
-      model: "gemini-2.0-flash",
-      geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY,
-      systemInstruction: {
-        parts: [
-          { text: `${prompts.system}\n\n${bundledSummaries}` }
-        ]
+    async function createConversation() {
+      const user = auth.currentUser;
+      if (user) {
+        const conversationsRef = collection(firestore, 'users', user.uid, 'conversations');
+        const newConversation = {
+          title: "New Conversation",
+          messages: [],
+          createdAt: serverTimestamp()
+        };
+        const docRef = await addDoc(conversationsRef, newConversation);
+        setActiveConversationId(docRef.id);
       }
-    };
-    console.log("Payload passed to getGenerativeModel:", payload);
-    return getGenerativeModel(vertexAI, payload);
-  }, [bundledSummaries, vertexAI]);
+    }
+    if (!activeConversationId) {
+      createConversation();
+    }
+  }, [activeConversationId]);
 
   const conversationDocRef = activeConversationId
-    ? doc(firestore, 'users', user.uid, 'conversations', activeConversationId)
+    ? doc(firestore, 'users', auth.currentUser.uid, 'conversations', activeConversationId)
     : null;
 
+  // Load chat conversation when activeConversationId is set
   useEffect(() => {
     if (!activeConversationId) return;
     async function loadChat() {
@@ -163,9 +75,10 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
         history: formattedHistory,
         generationConfig: { maxOutputTokens: 500 },
       });
+      setConversationLoaded(true);
     }
     loadChat();
-  }, [activeConversationId, conversationDocRef, model, prompts.system]);
+  }, [activeConversationId, conversationDocRef, vertexAI]);
 
   const saveChat = async (newMessages) => {
     if (!conversationDocRef) return;
@@ -181,7 +94,6 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
     await saveChat(updatedMessages);
     const messageToSend = input;
     setInput('');
-    console.log("Sending message to bot:", messageToSend);
     setLoading(true);
     try {
       const resultStream = await chatSession.current.sendMessageStream(messageToSend);
@@ -218,16 +130,84 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
     setLoading(false);
   };
 
-  const handleToggleSidebar = () => {
-    setIsSidebarCollapsed(!isSidebarCollapsed);
+  const handleVoiceButton = () => {};
+
+  // Updated summarization logic for ending conversation
+  const handleEndConversation = async () => {
+    let convMessages = messages;
+    if (!convMessages || convMessages.length === 0) return;
+    setLoading(true);
+    try {
+      const conversationText = convMessages.map(msg => `${msg.role}: ${msg.text}`).join('\n');
+      const combinedPrompt = prompts.summarizer + "\n\nConversation:\n" + conversationText;
+      const resultCombined = await model.generateContent(combinedPrompt);
+      const responseText = resultCombined.response.text();
+      const lines = responseText.split("\n").filter(line => line.trim() !== "");
+      const generatedTitle = lines[0].replace(/\*\*/g, '').trim();
+      const generatedSummary = lines.slice(1).join("\n").trim();
+      if (conversationDocRef) {
+        await updateDoc(conversationDocRef, {
+          summary: generatedSummary,
+          title: generatedTitle,
+          ended: true,
+          messages: []
+        });
+      }
+      setMessages([]);
+      setActiveConversationId(null);
+    } catch (err) {
+      console.error("Error during summarization: " + err.message);
+    }
+    setLoading(false);
   };
 
-  const handleSummarize = () => {
-    if (!activeConversationId) return;
-    navigate('/summaries', { state: { conversationId: activeConversationId, messages: messages } });
+  // For header check button: end conversation and navigate to home
+  const handleSummarizeHeader = async () => {
+    await handleEndConversation();
+    navigate('/home');
   };
 
-  // Cleanup recording interval on unmount
+  // For profile modal "I'm done" option: end conversation and navigate to profile
+  const handleEndConversationProfile = async () => {
+    await handleEndConversation();
+    navigate('/profile');
+  };
+
+  useEffect(() => {
+    async function fetchSummaries() {
+      const summaries = await getAllSummaries();
+      setBundledSummaries(summaries);
+    }
+    fetchSummaries();
+  }, []);
+
+  const getAllSummaries = async () => {
+    const user = auth.currentUser;
+    if (!user) return '';
+    const convRef = collection(firestore, 'users', user.uid, 'conversations');
+    const q = query(convRef);
+    const snapshot = await getDocs(q);
+    const summaries = [];
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.summary) summaries.push(data.summary);
+    });
+    return prompts.disclaimer + "\n" + summaries.join('\n');
+  };
+
+  const model = useMemo(() => {
+    const payload = {
+      model: "gemini-2.0-flash",
+      geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY,
+      systemInstruction: {
+        parts: [
+          { text: `${prompts.system}\n\n${bundledSummaries}` }
+        ]
+      }
+    };
+    return getGenerativeModel(vertexAI, payload);
+  }, [bundledSummaries, vertexAI]);
+
   useEffect(() => {
     return () => {
       if (recordingIntervalRef.current) {
@@ -240,77 +220,58 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
     <>
       <Header
         mode="chat"
-        onToggleSidebar={handleToggleSidebar}
-        onSummarize={handleSummarize}
+        onSummarize={handleSummarizeHeader}
         darkMode={darkMode}
       />
-      <div style={{ display: 'flex' }}>
-        <Sidebar
-          onSelectConversation={setActiveConversationId}
-          activeConversationId={activeConversationId}
-          darkMode={darkMode}
-          setDarkMode={setDarkMode}
-          isCollapsed={isSidebarCollapsed}
-          setIsCollapsed={setIsSidebarCollapsed}
-        />
-        <div
-          className="flex-grow-1"
-          style={{
-            marginLeft: isSidebarCollapsed ? '0px' : '260px',
-            transition: 'margin-left 0.3s ease',
-            position: 'relative'
-          }}
-        >
-          <div className="container-fluid p-3">
-            {!activeConversationId ? (
-              <h2 className="text-center">Please select a conversation from the sidebar or create a new one.</h2>
-            ) : (
-              <>
-                <div style={{ height: 'calc(100vh - 250px)', overflowY: 'auto' }}>
-                  {messages.map((msg, index) => (
-                    msg.role === 'user' ? (
-                      <div key={index} className="mb-2 text-end">
-                        <div className="d-inline-block p-2 bg-primary text-white rounded">
-                          {msg.text}
-                        </div>
-                      </div>
-                    ) : (
-                      <div key={index} className="mb-2 text-start">
-                        <div>
-                          {msg.text}
-                        </div>
-                      </div>
-                    )
-                  ))}
-                  {loading && <div className="text-center">Loading...</div>}
-                </div>
-                <div className="p-3 mt-3">
-                  <form onSubmit={handleSubmit}>
-                    <div className="d-flex align-items-stretch">
-                      <textarea
-                        className="form-control rounded"
-                        placeholder="Type your message..."
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        disabled={loading || isRecording}
-                        style={{ minHeight: '60px', maxHeight: '200px', resize: 'none', overflowY: 'auto' }}
-                        wrap="soft"
-                      ></textarea>
-                      <div className="d-flex align-items-center ms-2">
-                        <button type="button" onClick={handleVoiceButton} className="btn btn-outline-secondary btn-sm rounded-circle me-1">
-                          {isRecording ? <i className="bi bi-check"></i> : <i className="bi bi-mic"></i>}
-                        </button>
-                        <button className="btn btn-primary btn-sm rounded-circle" type="submit" disabled={loading || isRecording}>
-                          <i className="bi bi-arrow-up-circle-fill"></i>
-                        </button>
+      <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <div className="container-fluid p-3" style={{ flexGrow: 1 }}>
+          {!conversationLoaded ? (
+            <div className="text-center">Loading conversation...</div>
+          ) : (
+            <>
+              <div style={{ height: 'calc(100vh - 250px)', overflowY: 'auto' }}>
+                {messages.map((msg, index) => (
+                  msg.role === 'user' ? (
+                    <div key={index} className="mb-2 text-end">
+                      <div className="d-inline-block p-2 bg-primary text-white rounded">
+                        {msg.text}
                       </div>
                     </div>
-                  </form>
-                </div>
-              </>
-            )}
-          </div>
+                  ) : (
+                    <div key={index} className="mb-2 text-start">
+                      <div>{msg.text}</div>
+                    </div>
+                  )
+                ))}
+                {loading && <div className="text-center">Loading...</div>}
+              </div>
+              <div className="p-3 mt-3">
+                <form onSubmit={handleSubmit}>
+                  <div className="d-flex align-items-stretch">
+                    <textarea
+                      className="form-control rounded"
+                      placeholder="Type your message..."
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      disabled={loading || isRecording}
+                      style={{ minHeight: '60px', maxHeight: '200px', resize: 'none', overflowY: 'auto' }}
+                      wrap="soft"
+                    ></textarea>
+                    <div className="d-flex align-items-center ms-2">
+                      <button type="button" onClick={handleVoiceButton} className="btn btn-outline-secondary btn-sm rounded-circle me-1">
+                        {isRecording ? <i className="bi bi-check"></i> : <i className="bi bi-mic"></i>}
+                      </button>
+                      <button className="btn btn-primary btn-sm rounded-circle" type="submit" disabled={loading || isRecording}>
+                        <i className="bi bi-arrow-up-circle-fill"></i>
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </>
+          )}
         </div>
+        <Footer darkMode={darkMode} setDarkMode={setDarkMode} conversationActive={true} endConversation={handleEndConversationProfile} />
       </div>
     </>
   );

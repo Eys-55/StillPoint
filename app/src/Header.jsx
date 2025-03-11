@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode }) {
+function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversationTitle }) {
   const navbarClass = darkMode
     ? 'navbar navbar-dark bg-dark border-bottom'
     : 'navbar navbar-light bg-light border-bottom';
@@ -17,7 +17,7 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode }) {
             <i className="bi bi-list"></i>
           </button>
         )}
-        <span className="navbar-brand mb-0 h1">Chat App</span>
+        <span className="navbar-brand mb-0 h1" style={{ fontSize: 'var(--header-font-size)' }}>{conversationTitle || "Mental Health Conversation"}</span>
         {mode === 'chat' && (
           <button className="btn btn-outline-primary" onClick={onSummarize}>
             <i className="bi bi-check2-square"></i>

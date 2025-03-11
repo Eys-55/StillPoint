@@ -14,7 +14,7 @@ function Login() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      navigate('/chat');
+      navigate('/home');
     } catch (err) {
       setError(err.message);
     }
@@ -29,7 +29,7 @@ function Login() {
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
-      navigate('/chat');
+      navigate('/home');
     } catch (err) {
       setError(err.message);
     }
@@ -66,9 +66,9 @@ function Login() {
         </button>
       </form>
       <div className="mt-3 text-center">
-      <button className="btn btn-danger w-100 mb-3" onClick={handleGoogleLogin}>
-        Sign in with Google
-      </button>
+        <button className="btn btn-danger w-100 mb-3" onClick={handleGoogleLogin}>
+          Sign in with Google
+        </button>
         <button className="btn btn-link" onClick={() => setIsSignUp(!isSignUp)}>
           {isSignUp ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
         </button>

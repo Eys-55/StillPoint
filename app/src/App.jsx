@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Login from './Login.jsx';
+import Home from './home.jsx';
 import { auth } from './firebase.jsx';
 import { signOut } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -61,6 +62,14 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
+          path="/home"
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/chat"
           element={
             <ProtectedRoute>
@@ -83,7 +92,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="*" element={<Navigate to="/chat" replace />} />
+        <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
     </ErrorBoundary>
   );

@@ -156,7 +156,7 @@ function Sidebar({ onSelectConversation, activeConversationId, darkMode, setDark
               onClick={() => setShowEmailModal(true)}
               title={user.email}
             >
-              <span className="fw-bold">{user.email}</span>
+<span className="fw-bold" style={{ fontSize: 'var(--body-font-size)' }}>{user.email}</span>
             </button>
             <div className="d-flex gap-2">
             </div>

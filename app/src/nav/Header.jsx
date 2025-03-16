@@ -44,9 +44,7 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
             <button className="btn btn-outline-primary me-2" onClick={onSummarize}>
               <i className="bi bi-check2-square"></i>
             </button>
-            <button className="btn btn-outline-secondary" onClick={toggleDarkMode}>
-              {effectiveDarkMode ? <i className="bi bi-sun"></i> : <i className="bi bi-moon"></i>}
-            </button>
+{effectiveDarkMode ? <i className="bi bi-sun"></i> : <i className="bi bi-moon"></i>}
           </>
         ) : mode === 'home' ? (
           <button className="btn btn-outline-secondary" onClick={toggleDarkMode}>

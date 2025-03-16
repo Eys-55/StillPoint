@@ -1,17 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { collection, query, getDocs, deleteDoc, doc, addDoc, serverTimestamp, orderBy, onSnapshot } from 'firebase/firestore';
 import { auth, firestore } from '../firebase.jsx';
 
 function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCollapsed }) {
   const [conversations, setConversations] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [selectedConversation, setSelectedConversation] = useState(null);
   const [hoveredConversationId, setHoveredConversationId] = useState(null);
-
-  const handleOptionsClick = (conversation) => {
-    setSelectedConversation(conversation);
-    setModalVisible(true);
-  };
+  const [dropdownVisibleId, setDropdownVisibleId] = useState(null);
+  const isDarkMode = document.body.getAttribute("data-bs-theme") === "dark";
 
   const handleNewConversation = async () => {
     if (activeConversationId) {
@@ -33,13 +28,14 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
     setActiveConversationId(docRef.id);
   };
 
-  const handleDeleteWithMemories = async () => {
+  const handleDeleteWithMemories = async (conv) => {
+    if (!window.confirm("Are you sure you want to delete this conversation along with its memories?")) return;
     try {
       const user = auth.currentUser;
-      if (!user || !selectedConversation) return;
-      await deleteDoc(doc(firestore, 'users', user.uid, 'conversations', selectedConversation.id));
-      setConversations(prev => prev.filter(conv => conv.id !== selectedConversation.id));
-      setModalVisible(false);
+      if (!user || !conv) return;
+      await deleteDoc(doc(firestore, 'users', user.uid, 'conversations', conv.id));
+      setConversations(prev => prev.filter(c => c.id !== conv.id));
+      setDropdownVisibleId(null);
     } catch (error) {
       console.error("Error deleting conversation with memories: ", error);
     }
@@ -49,7 +45,7 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
     const user = auth.currentUser;
     if (user) {
       const convRef = collection(firestore, 'users', user.uid, 'conversations');
-        const q = query(convRef, orderBy("createdAt", "desc"));
+      const q = query(convRef, orderBy("createdAt", "desc"));
       const unsubscribe = onSnapshot(q, snapshot => {
         const convs = [];
         snapshot.forEach(docSnap => {
@@ -62,6 +58,30 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
     }
   }, []);
 
+  const sidebarRef = useRef(null);
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+        setIsSidebarCollapsed(true);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [setIsSidebarCollapsed]);
+
+  // Close dropdown if clicking outside of it
+  useEffect(() => {
+    if (dropdownVisibleId) {
+      const handleClickOutside = (event) => {
+        if (!event.target.closest('.dropdown-menu-sidebar')) {
+          setDropdownVisibleId(null);
+        }
+      };
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [dropdownVisibleId]);
+
   const handleConversationClick = (id) => {
     setActiveConversationId(id);
     setIsSidebarCollapsed(true);
@@ -69,26 +89,15 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
 
   return (
     <>
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '300px',
-        height: '100%',
-        backgroundColor: '#f8f9fa',
-        borderRight: '1px solid #ddd',
-        overflowY: 'auto',
-        zIndex: 1000,
-        padding: '1rem'
-      }}>
-<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-  <button onClick={() => setIsSidebarCollapsed(true)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>
-    <i className="bi bi-x"></i>
-  </button>
-  <button onClick={handleNewConversation} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>
-    <i className="bi bi-plus"></i>
-  </button>
-</div>
+      <div ref={sidebarRef} className="sidebar">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <button onClick={() => setIsSidebarCollapsed(true)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>
+            <i className="bi bi-x"></i>
+          </button>
+          <button onClick={handleNewConversation} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>
+            <i className="bi bi-plus"></i>
+          </button>
+        </div>
         <div>
           {conversations.map(conv => (
             <div
@@ -98,7 +107,7 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
                 marginBottom: '0.5rem',
                 cursor: 'pointer',
                 padding: '0.5rem',
-                backgroundColor: conv.id === activeConversationId ? '#e9ecef' : 'transparent'
+                backgroundColor: conv.id === activeConversationId ? (isDarkMode ? '#495057' : '#e9ecef') : 'transparent'
               }}
               onMouseEnter={() => setHoveredConversationId(conv.id)}
               onMouseLeave={() => setHoveredConversationId(null)}
@@ -107,7 +116,10 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
               {conv.title}
               {hoveredConversationId === conv.id && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleOptionsClick(conv); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDropdownVisibleId(prev => prev === conv.id ? null : conv.id);
+                  }}
                   style={{
                     position: 'absolute',
                     right: '5px',
@@ -122,42 +134,39 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
                   <i className="bi bi-three-dots"></i>
                 </button>
               )}
+              {dropdownVisibleId === conv.id && (
+                <div
+                  className="dropdown-menu-sidebar"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: '5px',
+                    backgroundColor: isDarkMode ? '#343a40' : '#fff',
+                    color: isDarkMode ? '#fff' : '#000',
+                    border: isDarkMode ? '1px solid #444' : '1px solid #ddd',
+                    padding: '0.5rem',
+                    zIndex: 1100
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={() => { alert("Rename functionality not implemented."); setDropdownVisibleId(null); }}
+                    style={{ background: 'none', border: 'none', display: 'block', width: '100%', textAlign: 'left', padding: '0.25rem 0' }}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    onClick={() => handleDeleteWithMemories(conv)}
+                    style={{ background: 'none', border: 'none', display: 'block', width: '100%', textAlign: 'left', padding: '0.25rem 0' }}
+                  >
+                    Delete with Memories
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
       </div>
-      {modalVisible && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1100
-        }}>
-          <div style={{
-            backgroundColor: '#fff',
-            padding: '1rem',
-            borderRadius: '4px',
-            width: '300px'
-          }}>
-            <h5>Conversation Options</h5>
-            <input type="text" defaultValue={selectedConversation ? selectedConversation.title : ''} style={{ width: '100%', marginBottom: '1rem' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <button style={{ marginRight: '0.5rem' }}>Rename</button>
-              <button style={{ marginRight: '0.5rem' }}>Delete</button>
-              <button onClick={handleDeleteWithMemories}>Delete with Memories</button>
-            </div>
-            <div style={{ textAlign: 'right', marginTop: '1rem' }}>
-              <button onClick={() => setModalVisible(false)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -6,7 +6,7 @@ import { auth } from './firebase.jsx';
 import { signOut } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import Chat from './chat/chat.jsx';
-import Summaries from './summaries.jsx';
+import Summaries from './home/summaries.jsx';
 import UserProfile from './home/user_profile.jsx';
 import Footer from './nav/footer.jsx';
 

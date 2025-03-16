@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, firestore } from '../firebase.jsx';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import questions from './questions.js';
+import { questions } from '../prompts.js';
 
 function Questionnaire({ onComplete }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);

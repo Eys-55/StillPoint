@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Header from './Header.jsx';
+import Header from './nav/Header.jsx';
 import prompts from './prompts.js';
 import { getVertexAI, getGenerativeModel } from 'firebase/vertexai';
 import { app, auth, firestore } from './firebase.jsx';

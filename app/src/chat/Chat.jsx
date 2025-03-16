@@ -1,22 +1,25 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { app, auth, firestore } from './firebase.jsx';
+import { app, auth, firestore } from '../firebase.jsx';
 import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
-import prompts from './prompts.js';
+import prompts from '../prompts.js';
 import { doc, getDoc, setDoc, updateDoc, collection, query, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
-import Footer from './footer.jsx';
-import Header from './Header.jsx';
+import Footer from '../nav/footer.jsx';
+import Header from '../nav/Header.jsx';
+import Sidebar from './sidebar.jsx';
 import { useNavigate } from 'react-router-dom';
 
-function Chat({ darkMode, setDarkMode }) {
+function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversationId, isSidebarCollapsed, setIsSidebarCollapsed }) {
   const [messages, setMessages] = useState([]);
   const [bundledSummaries, setBundledSummaries] = useState('');
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [activeConversationId, setActiveConversationId] = useState(null);
+  
   const [isRecording, setIsRecording] = useState(false);
   const [conversationLoaded, setConversationLoaded] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [summaryModalVisible, setSummaryModalVisible] = useState(false);
+  const [summaryData, setSummaryData] = useState({ title: '', summary: '' });
   const recordingIntervalRef = useRef(null);
   const chatSession = useRef(null);
   const navigate = useNavigate();
@@ -29,25 +32,7 @@ function Chat({ darkMode, setDarkMode }) {
     return `${m}:${s}`;
   }
 
-  // Auto-create a new conversation if none exists
-  useEffect(() => {
-    async function createConversation() {
-      const user = auth.currentUser;
-      if (user) {
-        const conversationsRef = collection(firestore, 'users', user.uid, 'conversations');
-        const newConversation = {
-          title: "New Conversation",
-          messages: [],
-          createdAt: serverTimestamp()
-        };
-        const docRef = await addDoc(conversationsRef, newConversation);
-        setActiveConversationId(docRef.id);
-      }
-    }
-    if (!activeConversationId) {
-      createConversation();
-    }
-  }, [activeConversationId]);
+  // Removed auto-creation useEffect block to defer conversation creation until first message is sent.
 
   const conversationDocRef = activeConversationId
     ? doc(firestore, 'users', auth.currentUser.uid, 'conversations', activeConversationId)
@@ -82,12 +67,27 @@ function Chat({ darkMode, setDarkMode }) {
 
   const saveChat = async (newMessages) => {
     if (!conversationDocRef) return;
-    await updateDoc(conversationDocRef, { messages: newMessages });
-  };
+    await updateDoc(conversationDocRef, { messages: newMessages, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!input.trim() || !conversationDocRef) return;
+    if (!input.trim()) return;
+    let conversationId = activeConversationId;
+    if (!conversationId) {
+      const user = auth.currentUser;
+      const conversationsRef = collection(firestore, 'users', user.uid, 'conversations');
+      const newConversation = {
+        title: "New Conversation",
+        messages: [],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      const docRef = await addDoc(conversationsRef, newConversation);
+      conversationId = docRef.id;
+      setActiveConversationId(docRef.id);
+    }
+    const conversationDocRef = doc(firestore, 'users', auth.currentUser.uid, 'conversations', conversationId);
     const userMessage = { role: 'user', text: input };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
@@ -150,11 +150,10 @@ function Chat({ darkMode, setDarkMode }) {
           summary: generatedSummary,
           title: generatedTitle,
           ended: true,
-          messages: []
         });
       }
-      setMessages([]);
-      setActiveConversationId(null);
+      setSummaryData({ title: generatedTitle, summary: generatedSummary });
+      setSummaryModalVisible(true);
     } catch (err) {
       console.error("Error during summarization: " + err.message);
     }
@@ -164,7 +163,6 @@ function Chat({ darkMode, setDarkMode }) {
   // For header check button: end conversation and navigate to home
   const handleSummarizeHeader = async () => {
     await handleEndConversation();
-    navigate('/home');
   };
 
   // For profile modal "I'm done" option: end conversation and navigate to profile
@@ -220,9 +218,17 @@ function Chat({ darkMode, setDarkMode }) {
     <>
       <Header
         mode="chat"
+        onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onSummarize={handleSummarizeHeader}
         darkMode={darkMode}
       />
+      {!isSidebarCollapsed && (
+        <Sidebar
+          activeConversationId={activeConversationId}
+          setActiveConversationId={setActiveConversationId}
+          setIsSidebarCollapsed={setIsSidebarCollapsed}
+        />
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <div className="container-fluid p-3" style={{ flexGrow: 1 }}>
           {!conversationLoaded ? (
@@ -273,6 +279,17 @@ function Chat({ darkMode, setDarkMode }) {
         </div>
         <Footer darkMode={darkMode} setDarkMode={setDarkMode} conversationActive={true} endConversation={handleEndConversationProfile} />
       </div>
+      {summaryModalVisible && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex: 1200 }}>
+          <div style={{ backgroundColor: '#fff', padding: '1rem', borderRadius: '4px', width: '300px' }}>
+            <h5>{summaryData.title}</h5>
+            <p>{summaryData.summary}</p>
+            <div style={{ textAlign: 'right', marginTop: '1rem' }}>
+              <button onClick={() => setSummaryModalVisible(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

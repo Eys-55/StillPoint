@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Header from '../Header.jsx';
+import Header from '../nav/Header.jsx';
 import { auth, firestore } from '../firebase.jsx';
 import { doc, getDoc } from 'firebase/firestore';
 import Questionnaire from './questionnaire.jsx';

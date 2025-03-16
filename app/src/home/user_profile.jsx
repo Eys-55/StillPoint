@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, firestore } from '../firebase.jsx';
 import { doc, getDoc } from 'firebase/firestore';
-import Header from '../Header.jsx';
+import Header from '../nav/Header.jsx';
 import { useNavigate } from 'react-router-dom';
 
 function UserProfile() {

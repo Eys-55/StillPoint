@@ -5,10 +5,10 @@ import Home from './home/home.jsx';
 import { auth } from './firebase.jsx';
 import { signOut } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import Chat from './Chat.jsx';
+import Chat from './chat/chat.jsx';
 import Summaries from './summaries.jsx';
 import UserProfile from './home/user_profile.jsx';
-import Footer from './footer.jsx';
+import Footer from './nav/footer.jsx';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {

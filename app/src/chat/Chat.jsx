@@ -231,7 +231,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
       )}
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         <div className="container-fluid p-3" style={{ flexGrow: 1 }}>
-          {!conversationLoaded ? (
+          {activeConversationId && !conversationLoaded ? (
             <div className="text-center">Loading conversation...</div>
           ) : (
             <>

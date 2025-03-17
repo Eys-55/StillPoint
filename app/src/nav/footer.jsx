@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 function Footer({ darkMode, setDarkMode, conversationActive, endConversation }) {
   const navigate = useNavigate();
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  // Removed settings modal state as we now navigate to settings
   const [showConversationModal, setShowConversationModal] = useState(false);
 
   const handleHome = () => {
@@ -23,7 +23,7 @@ function Footer({ darkMode, setDarkMode, conversationActive, endConversation }) 
   };
 
   const handleSettings = () => {
-    setShowSettingsModal(true);
+    navigate('/settings');
   };
 
   const handleCloseModal = () => {
@@ -64,38 +64,7 @@ function Footer({ darkMode, setDarkMode, conversationActive, endConversation }) 
           </div>
         </div>
       </footer>
-      {showSettingsModal && (
-        <>
-          <div className="modal show" style={{ display: 'block' }} tabIndex="-1">
-            <div className="modal-dialog modal-dialog-centered">
-              <div className={`modal-content ${footerClass}`}>
-                <div className="modal-header">
-                  <h5 className="modal-title">Settings</h5>
-                  <button type="button" className="btn-close" onClick={handleCloseModal}></button>
-                </div>
-                <div className="modal-body">
-                  <div className="form-check form-switch mb-3">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id="darkModeSwitchFooter"
-                      checked={darkMode}
-                      onChange={() => setDarkMode(!darkMode)}
-                    />
-                    <label className="form-check-label" htmlFor="darkModeSwitchFooter">
-                      Dark Mode
-                    </label>
-                  </div>
-                  <button className="btn btn-danger w-100" onClick={handleLogout}>
-                    Logout
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="modal-backdrop show"></div>
-        </>
-      )}
+
       {showConversationModal && (
         <>
           <div className="modal show" style={{ display: 'block' }} tabIndex="-1">

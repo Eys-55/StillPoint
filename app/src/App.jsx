@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Login from './Login.jsx';
+import Login  from './user/login.jsx';
 import Home from './home/home.jsx';
 import { auth } from './firebase.jsx';
 import { signOut } from 'firebase/auth';
@@ -9,6 +9,8 @@ import Chat from './chat/chat.jsx';
 import Summaries from './home/summaries.jsx';
 import UserProfile from './home/user_profile.jsx';
 import Footer from './nav/footer.jsx';
+import Privacy from './user/privacy.jsx';
+import Settings from './user/settings.jsx';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -42,6 +44,7 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [user] = useAuthState(auth);
 
   useEffect(() => {
     document.body.setAttribute("data-bs-theme", darkMode ? "dark" : "light");
@@ -102,9 +105,25 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <ProtectedRoute>
+              <Privacy />
+            </ProtectedRoute>
+          }
+        />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
-      <Footer darkMode={darkMode} setDarkMode={setDarkMode} />
+      {user && <Footer darkMode={darkMode} setDarkMode={setDarkMode} />}
     </ErrorBoundary>
   );
 }

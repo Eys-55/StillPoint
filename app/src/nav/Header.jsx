@@ -29,7 +29,7 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
           <button className="btn btn-outline-secondary" onClick={onBack}>
             <i className="bi bi-arrow-left"></i>
           </button>
-        ) : mode === 'home' ? (
+        ) : (mode === 'home' || mode === 'profile' || mode === 'settings') ? (
           <div></div>
         ) : (
           <button className="btn btn-outline-secondary" onClick={onToggleSidebar}>
@@ -37,18 +37,11 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
           </button>
         )}
         <span className="navbar-brand mb-0 h1" style={{ fontSize: 'var(--header-font-size)' }}>
-          {conversationTitle || (mode === 'home' ? "Mental Health App" : "Mental Health Conversation")}
+          {conversationTitle || (mode === 'home' ? "Home" : mode === 'profile' ? "Profile" : mode === 'settings' ? "Settings" : "Mental Health Conversation")}
         </span>
         {mode === 'chat' ? (
-          <>
-            <button className="btn btn-outline-primary me-2" onClick={onSummarize}>
-              <i className="bi bi-check2-square"></i>
-            </button>
-{effectiveDarkMode ? <i className="bi bi-sun"></i> : <i className="bi bi-moon"></i>}
-          </>
-        ) : mode === 'home' ? (
-          <button className="btn btn-outline-secondary" onClick={toggleDarkMode}>
-            {effectiveDarkMode ? <i className="bi bi-sun"></i> : <i className="bi bi-moon"></i>}
+          <button className="btn btn-outline-primary me-2" onClick={onSummarize}>
+            <i className="bi bi-check2-square"></i>
           </button>
         ) : null}
       </div>

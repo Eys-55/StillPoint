@@ -11,11 +11,9 @@ The first line should be a concise title (maximum 5 words) (maximum 5 words) (ma
 and the second line should be a summary capturing the essence of the discussion in a few sentences. Ensure that the summary is objective such as "The user expresses grief towards x"
 Format: Title\nSummary`,
 
-  disclaimer: `Note: These summaries provide details about the user and should be used to guide your interactions, offering context into their thoughts and feelings based on previous conversations.`
+  disclaimer: `Note: These summaries provide details about the user and should be used to guide your interactions, offering context into their thoughts and feelings based on previous conversations.`,
+
+  userProfileLabel: `These are the information about the user and their preferences:`
 };
 
-
-
 export default prompts;
-
-

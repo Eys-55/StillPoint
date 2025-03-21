@@ -12,6 +12,7 @@ import { useChatHandlers } from './chat_hooks.jsx';
 function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversationId, isSidebarCollapsed, setIsSidebarCollapsed }) {
   const [messages, setMessages] = useState([]);
   const [bundledSummaries, setBundledSummaries] = useState('');
+  const [userProfile, setUserProfile] = useState('');
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -64,20 +65,12 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
       geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY,
       systemInstruction: {
         parts: [
-          { text: `${prompts.system}\n\n${bundledSummaries}` }
+          { text: `${prompts.system}\n\n${bundledSummaries}\n\n${prompts.userProfileLabel}\n${userProfile}` }
         ]
       }
     };
     return getGenerativeModel(vertexAI, payload);
-  }, [bundledSummaries, vertexAI]);
-
-  useEffect(() => {
-    return () => {
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-      }
-    };
-  }, []);
+  }, [bundledSummaries, userProfile, vertexAI]);
 
   useEffect(() => {
     async function fetchSummaries() {
@@ -85,6 +78,23 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
       setBundledSummaries(summaries);
     }
     fetchSummaries();
+  }, []);
+
+  useEffect(() => {
+    async function fetchUserProfile() {
+      const user = auth.currentUser;
+      if (!user) return;
+      const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.answers) {
+          const profileText = data.answers.map(a => `Q: ${a.question}\nA: ${a.answer}`).join('\n');
+          setUserProfile(profileText);
+        }
+      }
+    }
+    fetchUserProfile();
   }, []);
 
   const getAllSummaries = async () => {
@@ -131,7 +141,6 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
           setIsSidebarCollapsed={setIsSidebarCollapsed}
         />
       )}
-      {/* Messages container scrolls between Header and Chat Bar */}
       <div style={{ position: 'fixed', top: '60px', bottom: '160px', left: 0, right: 0, overflowY: 'auto', padding: '1rem' }}>
         {activeConversationId && !conversationLoaded ? (
           <div className="text-center">Loading conversation...</div>
@@ -152,7 +161,6 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
         )}
         {loading && <div className="text-center">Loading...</div>}
       </div>
-      {/* Chat bar fixed above Footer with extra bottom padding */}
       <div style={{ position: 'fixed', bottom: '60px', left: 0, right: 0, padding: '0 1rem 20px' }}>
         <form onSubmit={handleSubmit}>
           <div className="d-flex align-items-stretch">
@@ -189,17 +197,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
         conversationActive={true}
         endConversation={handleEndConversationProfile}
       />
-      {summaryModalVisible && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex: 1200 }}>
-          <div style={{ backgroundColor: '#fff', padding: '1rem', borderRadius: '4px', width: '300px' }}>
-            <h5>{summaryData.title}</h5>
-            <p>{summaryData.summary}</p>
-            <div style={{ textAlign: 'right', marginTop: '1rem' }}>
-              <button onClick={() => setSummaryModalVisible(false)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
+      {auth.currentUser && window.location.pathname !== '/chat' && <Footer darkMode={darkMode} setDarkMode={setDarkMode} />}
     </>
   );
 }

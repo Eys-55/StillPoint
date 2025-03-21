@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { collection, query, getDocs, deleteDoc, doc, addDoc, serverTimestamp, orderBy, onSnapshot } from 'firebase/firestore';
 import { auth, firestore } from '../firebase.jsx';
+import { useSidebarHandlers } from './sidebar_hooks.jsx';
 
 function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCollapsed }) {
   const [conversations, setConversations] = useState([]);
@@ -8,38 +9,14 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
   const [dropdownVisibleId, setDropdownVisibleId] = useState(null);
   const isDarkMode = document.body.getAttribute("data-bs-theme") === "dark";
 
-  const handleNewConversation = async () => {
-    if (activeConversationId) {
-      const currentConv = conversations.find(conv => conv.id === activeConversationId);
-      if (currentConv && currentConv.title === "New Conversation") {
-        return;
-      }
-    }
-    const user = auth.currentUser;
-    if (!user) return;
-    const convRef = collection(firestore, 'users', user.uid, 'conversations');
-    const newConv = {
-      title: "New Conversation",
-      messages: [],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    };
-    const docRef = await addDoc(convRef, newConv);
-    setActiveConversationId(docRef.id);
-  };
-
-  const handleDeleteWithMemories = async (conv) => {
-    if (!window.confirm("Are you sure you want to delete this conversation along with its memories?")) return;
-    try {
-      const user = auth.currentUser;
-      if (!user || !conv) return;
-      await deleteDoc(doc(firestore, 'users', user.uid, 'conversations', conv.id));
-      setConversations(prev => prev.filter(c => c.id !== conv.id));
-      setDropdownVisibleId(null);
-    } catch (error) {
-      console.error("Error deleting conversation with memories: ", error);
-    }
-  };
+  const { handleNewConversation, handleDeleteWithMemories, handleConversationClick } = useSidebarHandlers({
+    activeConversationId,
+    conversations,
+    setActiveConversationId,
+    setConversations,
+    setIsSidebarCollapsed,
+    setDropdownVisibleId
+  });
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -69,7 +46,6 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [setIsSidebarCollapsed]);
 
-  // Close dropdown if clicking outside of it
   useEffect(() => {
     if (dropdownVisibleId) {
       const handleClickOutside = (event) => {
@@ -81,11 +57,6 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
       return () => document.removeEventListener('click', handleClickOutside);
     }
   }, [dropdownVisibleId]);
-
-  const handleConversationClick = (id) => {
-    setActiveConversationId(id);
-    setIsSidebarCollapsed(true);
-  };
 
   return (
     <>

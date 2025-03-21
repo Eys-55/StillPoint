@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversationTitle }) {
+  const navigate = useNavigate();
   // For home mode, use local state for dark toggle; otherwise, use the darkMode prop.
   const [localDarkMode, setLocalDarkMode] = useState(mode === 'home' ? (document.body.getAttribute("data-bs-theme") === "dark") : darkMode);
 
@@ -22,11 +24,19 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
     setLocalDarkMode(!effectiveDarkMode);
   };
 
+  const handleBackClick = () => {
+    if (mode === 'summaries') {
+      navigate('/profile');
+    } else if (onBack) {
+      onBack();
+    }
+  };
+
   return (
     <nav className={navbarClass}>
       <div className="container-fluid d-flex justify-content-between align-items-center">
         {mode === 'summaries' ? (
-          <button className="btn btn-outline-secondary" onClick={onBack}>
+          <button className="btn btn-outline-secondary" onClick={handleBackClick}>
             <i className="bi bi-arrow-left"></i>
           </button>
         ) : (mode === 'home' || mode === 'profile' || mode === 'settings') ? (

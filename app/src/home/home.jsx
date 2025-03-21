@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Header from '../nav/Header.jsx';
+import Header from '../nav/header.jsx';
 import { auth, firestore } from '../firebase.jsx';
 import { doc, getDoc } from 'firebase/firestore';
-import Questionnaire from './questionnaire.jsx';
 
 function Home() {
   const navigate = useNavigate();
   const [questionnaireCompleted, setQuestionnaireCompleted] = useState(null);
-  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
 
   useEffect(() => {
     async function checkQuestionnaire() {
@@ -40,15 +38,6 @@ function Home() {
     navigate('/profile');
   };
 
-  const handleShowQuestionnaire = () => {
-    setShowQuestionnaire(true);
-  };
-
-  const handleQuestionnaireComplete = () => {
-    setQuestionnaireCompleted(true);
-    setShowQuestionnaire(false);
-  };
-
   return (
     <div>
       <Header mode="home" darkMode={document.body.getAttribute("data-bs-theme") === "dark"} />
@@ -59,16 +48,9 @@ function Home() {
             <div className="alert alert-warning">
               You have not answered your questionnaire yet. Please complete it to receive personalized recommendations.
             </div>
-            {!showQuestionnaire && (
-              <button className="btn btn-outline-primary" onClick={handleShowQuestionnaire}>
-                Answer Questionnaire
-              </button>
-            )}
-            {showQuestionnaire && (
-              <div className="mt-3">
-                <Questionnaire onComplete={handleQuestionnaireComplete} />
-              </div>
-            )}
+            <button className="btn btn-outline-primary" onClick={() => navigate('/get-started')}>
+              Answer Questionnaire
+            </button>
           </div>
         )}
         <div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth, firestore } from '../firebase.jsx';
 import { doc, getDoc } from 'firebase/firestore';
-import Header from '../nav/Header.jsx';
+import Header from '../nav/header.jsx';
 import { useNavigate } from 'react-router-dom';
 
 function UserProfile() {
@@ -32,6 +32,10 @@ function UserProfile() {
     navigate('/summaries');
   };
 
+  const handleEditQuestionnaire = () => {
+    navigate('/get-started');
+  };
+
   if (!user) return <div>Loading user data...</div>;
 
   return (
@@ -55,6 +59,11 @@ function UserProfile() {
             ))
           ) : (
             <p>No questionnaire responses found.</p>
+          )}
+          {questionnaireData && questionnaireData.answers && (
+            <button className="btn btn-secondary mt-3" onClick={handleEditQuestionnaire}>
+              Edit Questionnaire Responses
+            </button>
           )}
         </div>
         <div className="mb-3">

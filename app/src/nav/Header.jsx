@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversationTitle }) {
+function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversationTitle, lastSavedTime, hasNewMessages }) {
   const navigate = useNavigate();
-  // For home mode, use local state for dark toggle; otherwise, use the darkMode prop.
   const [localDarkMode, setLocalDarkMode] = useState(mode === 'home' ? (document.body.getAttribute("data-bs-theme") === "dark") : darkMode);
 
   useEffect(() => {
@@ -14,7 +13,6 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
     }
   }, [mode, darkMode]);
 
-  // For chat and other modes, use darkMode prop.
   const effectiveDarkMode = mode === 'home' ? localDarkMode : darkMode;
   const navbarClass = effectiveDarkMode ? 'navbar navbar-dark bg-dark border-bottom' : 'navbar navbar-light bg-light border-bottom';
 
@@ -31,6 +29,8 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
       onBack();
     }
   };
+
+  const formattedTime = lastSavedTime ? new Date(lastSavedTime).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) : "Not saved";
 
   return (
     <nav className={navbarClass}>
@@ -49,11 +49,16 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
         <span className="navbar-brand mb-0 h1" style={{ fontSize: 'var(--header-font-size)' }}>
           {conversationTitle || (mode === 'home' ? "Home" : mode === 'profile' ? "Profile" : mode === 'settings' ? "Settings" : "Mental Health Conversation")}
         </span>
-        {mode === 'chat' ? (
-          <button className="btn btn-outline-primary me-2" onClick={onSummarize}>
-            <i className="bi bi-check2-square"></i>
-          </button>
-        ) : null}
+        {mode === 'chat' && (
+          <div className="d-flex align-items-center">
+            <span className="me-2" style={{ cursor: 'pointer' }} onClick={onSummarize}>
+              {hasNewMessages ? `New messages since: ${formattedTime}` : `Last saved: ${formattedTime}`}
+            </span>
+            <button className="btn btn-outline-primary" onClick={onSummarize}>
+              <i className="bi bi-check2-square"></i>
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { auth, firestore } from '../firebase.jsx';
 import { doc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -13,8 +13,14 @@ export const useChatHandlers = ({
   model,
   setLoading,
   prompts,
-  navigate
+  navigate,
+  isRecording,
+  setIsRecording,
+  setRecordingTime
 }) => {
+  const recognitionRef = useRef(null);
+  const timerIntervalRef = useRef(null);
+
   const saveChat = async (newMessages) => {
     if (!activeConversationId) return;
     const conversationDocRef = doc(firestore, 'users', auth.currentUser.uid, 'conversations', activeConversationId);
@@ -82,8 +88,71 @@ export const useChatHandlers = ({
   }, [input, activeConversationId, messages, setMessages, setInput, setActiveConversationId, chatSession, setLoading]);
 
   const handleVoiceButton = useCallback(() => {
-    // Placeholder for voice button logic
-  }, []);
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    if (!recognitionRef.current) {
+      // Start recording
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      // Start timer for recording duration
+      setRecordingTime(0);
+      timerIntervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        setIsRecording(false);
+        if(timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
+        setRecordingTime(0);
+        recognitionRef.current = null;
+      };
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error", event);
+        setIsRecording(false);
+        if(timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
+        setRecordingTime(0);
+        recognitionRef.current = null;
+      };
+      recognition.onend = () => {
+        setIsRecording(false);
+        if(timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+          timerIntervalRef.current = null;
+        }
+        setRecordingTime(0);
+        recognitionRef.current = null;
+      };
+
+      recognitionRef.current = recognition;
+      setIsRecording(true);
+      recognition.start();
+    } else {
+      // Stop recording manually
+      recognitionRef.current.stop();
+      setIsRecording(false);
+      if(timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      setRecordingTime(0);
+      recognitionRef.current = null;
+    }
+  }, [setInput, setIsRecording, setRecordingTime]);
 
   const handleEndConversation = useCallback(async () => {
     if (!messages || messages.length === 0) return;

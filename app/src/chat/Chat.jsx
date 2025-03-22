@@ -16,9 +16,12 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
   const [conversationLoaded, setConversationLoaded] = useState(false);
   const [summaryModalVisible, setSummaryModalVisible] = useState(false);
   const [summaryData, setSummaryData] = useState({ title: '', summary: '' });
+  const [lastSavedTime, setLastSavedTime] = useState(null);
+  const [lastMessageCountAtSave, setLastMessageCountAtSave] = useState(0);
   const recordingIntervalRef = useRef(null);
   const chatSession = useRef(null);
   const navigate = useNavigate();
@@ -47,7 +50,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
       }));
       chatSession.current = model.startChat({
         history: formattedHistory,
-        generationConfig: { maxOutputTokens: 500 },
+        generationConfig: { maxOutputTokens: 1000 },
       });
       setConversationLoaded(true);
     }
@@ -122,8 +125,17 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
     model,
     setLoading,
     prompts,
-    navigate
+    navigate,
+    isRecording,
+    setIsRecording,
+    setRecordingTime
   });
+
+  const handleSummarizeAndUpdate = async () => {
+    await handleSummarizeHeader();
+    setLastSavedTime(new Date());
+    setLastMessageCountAtSave(messages.length);
+  };
 
   return (
     <>
@@ -131,8 +143,10 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
         style={{ position: 'fixed', top: 0, width: '100%', zIndex: 1000 }}
         mode="chat"
         onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        onSummarize={handleSummarizeHeader}
+        onSummarize={handleSummarizeAndUpdate}
         darkMode={darkMode}
+        lastSavedTime={lastSavedTime}
+        hasNewMessages={messages.length > lastMessageCountAtSave}
       />
       {!isSidebarCollapsed && (
         <Sidebar
@@ -167,7 +181,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
             <textarea
               className="form-control rounded"
               placeholder="Type your message..."
-              value={input}
+              value={loading ? "Loading..." : (isRecording ? `Recording: ${recordingTime}s` : input)}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {

@@ -176,7 +176,13 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
         {loading && <div className="text-center">Loading...</div>}
       </div>
       <div style={{ position: 'fixed', bottom: '60px', left: 0, right: 0, padding: '0 1rem 20px' }}>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => {
+          console.log("prompts.system:", prompts.system);
+          console.log("bundledSummaries:", bundledSummaries);
+          console.log("prompts.userProfileLabel:", prompts.userProfileLabel);
+          console.log("userProfile:", userProfile);
+          handleSubmit(e);
+        }}>
           <div className="d-flex align-items-stretch">
             <textarea
               className="form-control rounded"

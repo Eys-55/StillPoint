@@ -50,6 +50,9 @@ export const useChatHandlers = ({
     setMessages(updatedMessages);
     await saveChat(updatedMessages);
     const messageToSend = input;
+    console.log("Message prompt:", messageToSend);
+    console.log("Full prompt payload:", { systemPrompt: model?.payload?.systemInstruction?.parts[0].text || "Not available", conversationHistory: messages });
+    console.log("Complete prompt string:", model?.payload?.systemInstruction?.parts[0].text);
     setInput('');
     setLoading(true);
     try {

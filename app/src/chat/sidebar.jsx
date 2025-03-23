@@ -28,7 +28,11 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
         const convs = [];
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
-          convs.push({ id: docSnap.id, title: data.title || 'Untitled Conversation' });
+          convs.push({
+            id: docSnap.id,
+            title: data.title || 'Untitled Conversation',
+            messageCount: data.messages ? data.messages.length : 0
+          });
         });
         setConversations(convs);
       });

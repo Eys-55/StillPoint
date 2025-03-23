@@ -13,7 +13,7 @@ export const useSidebarHandlers = ({
   const handleNewConversation = useCallback(async () => {
     if (activeConversationId) {
       const currentConv = conversations.find(conv => conv.id === activeConversationId);
-      if (currentConv && currentConv.title === "New Conversation") {
+      if (currentConv && currentConv.title === "New Conversation" && (!currentConv.messageCount || currentConv.messageCount === 0)) {
         return;
       }
     }
@@ -50,3 +50,5 @@ export const useSidebarHandlers = ({
 
   return { handleNewConversation, handleDeleteWithMemories, handleConversationClick };
 };
+
+export default useSidebarHandlers;

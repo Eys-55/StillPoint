@@ -8,6 +8,7 @@ import Header from '../nav/header.jsx';
 import Sidebar from './sidebar.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useChatHandlers } from './chat_hooks.jsx';
+import { questions } from '../meta/questions.js';
 
 function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversationId, isSidebarCollapsed, setIsSidebarCollapsed }) {
   const [messages, setMessages] = useState([]);
@@ -92,8 +93,18 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.answers) {
-          const profileText = data.answers.map(a => `Q: ${a.question}\nA: ${a.answer}`).join('\n');
-          setUserProfile(profileText);
+          let profileSummary = "";
+          data.answers.forEach(a => {
+            const q = questions.find(q => q.question.includes(a.question.trim()));
+            if (q && q.optionDetails && q.optionDetails[a.answer]) {
+              profileSummary += `- ${q.optionDetails[a.answer]}\n`;
+            }
+          });
+          const formattedProfile = `<user_preference>
+These are the user's preferences and traits:
+${profileSummary.trim()}
+</user_preference>`;
+          setUserProfile(formattedProfile);
         }
       }
     }
@@ -111,7 +122,10 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
       const data = docSnap.data();
       if (data.summary) summaries.push(data.summary);
     });
-    return prompts.disclaimer + "\n" + summaries.join('\n');
+    if (summaries.length > 0) {
+      return prompts.disclaimer.replace('</disclaimer>', "\n" + summaries.join('\n') + "\n</disclaimer>");
+    }
+    return prompts.disclaimer;
   };
 
   const { handleSubmit, handleVoiceButton, handleEndConversation, handleSummarizeHeader, handleEndConversationProfile } = useChatHandlers({
@@ -128,7 +142,9 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
     navigate,
     isRecording,
     setIsRecording,
-    setRecordingTime
+    setRecordingTime,
+    bundledSummaries,
+    userProfile
   });
 
   const handleSummarizeAndUpdate = async () => {

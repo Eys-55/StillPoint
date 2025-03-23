@@ -16,7 +16,9 @@ export const useChatHandlers = ({
   navigate,
   isRecording,
   setIsRecording,
-  setRecordingTime
+  setRecordingTime,
+  bundledSummaries,   // Added parameter
+  userProfile         // Added parameter
 }) => {
   const recognitionRef = useRef(null);
   const timerIntervalRef = useRef(null);
@@ -50,9 +52,13 @@ export const useChatHandlers = ({
     setMessages(updatedMessages);
     await saveChat(updatedMessages);
     const messageToSend = input;
+    
+    // Build the full prompt string from prompts, bundledSummaries, and userProfile
+    const fullPrompt = `${prompts.system}\n\n${bundledSummaries}\n\n${prompts.userProfileLabel}\n${userProfile}`;
     console.log("Message prompt:", messageToSend);
-    console.log("Full prompt payload:", { systemPrompt: model?.payload?.systemInstruction?.parts[0].text || "Not available", conversationHistory: messages });
-    console.log("Complete prompt string:", model?.payload?.systemInstruction?.parts[0].text);
+    console.log("Full prompt payload:", { systemPrompt: fullPrompt, conversationHistory: messages });
+    console.log("Complete prompt string:", fullPrompt);
+    
     setInput('');
     setLoading(true);
     try {
@@ -88,7 +94,7 @@ export const useChatHandlers = ({
       });
     }
     setLoading(false);
-  }, [input, activeConversationId, messages, setMessages, setInput, setActiveConversationId, chatSession, setLoading]);
+  }, [input, activeConversationId, messages, setMessages, setInput, setActiveConversationId, chatSession, setLoading, prompts, bundledSummaries, userProfile]);
 
   const handleVoiceButton = useCallback(() => {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
@@ -97,14 +103,12 @@ export const useChatHandlers = ({
     }
 
     if (!recognitionRef.current) {
-      // Start recording
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
 
-      // Start timer for recording duration
       setRecordingTime(0);
       timerIntervalRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
@@ -145,7 +149,6 @@ export const useChatHandlers = ({
       setIsRecording(true);
       recognition.start();
     } else {
-      // Stop recording manually
       recognitionRef.current.stop();
       setIsRecording(false);
       if(timerIntervalRef.current) {

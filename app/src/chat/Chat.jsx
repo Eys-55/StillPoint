@@ -40,10 +40,20 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
       if (conversationDoc.exists()) {
         initialHistory = conversationDoc.data().messages;
         setMessages(initialHistory);
+        const updatedAt = conversationDoc.data().updatedAt;
+        if (updatedAt) {
+          setLastSavedTime(updatedAt.toDate());
+          setLastMessageCountAtSave(initialHistory.length);
+        } else {
+          setLastSavedTime(null);
+          setLastMessageCountAtSave(0);
+        }
       } else {
         initialHistory = [];
         setMessages(initialHistory);
         await setDoc(conversationDocRef, { messages: initialHistory, title: "New Conversation" });
+        setLastSavedTime(null);
+        setLastMessageCountAtSave(0);
       }
       const formattedHistory = initialHistory.map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
@@ -163,6 +173,7 @@ ${profileSummary.trim()}
         darkMode={darkMode}
         lastSavedTime={lastSavedTime}
         hasNewMessages={messages.length > lastMessageCountAtSave}
+        hasMessages={messages.length > 0}
       />
       {!isSidebarCollapsed && (
         <Sidebar

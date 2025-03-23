@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversationTitle, lastSavedTime, hasNewMessages }) {
+function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversationTitle, lastSavedTime, hasNewMessages, hasMessages }) {
   const navigate = useNavigate();
   const [localDarkMode, setLocalDarkMode] = useState(mode === 'home' ? (document.body.getAttribute("data-bs-theme") === "dark") : darkMode);
 
@@ -30,7 +30,9 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
     }
   };
 
-  const formattedTime = lastSavedTime ? new Date(lastSavedTime).toLocaleDateString(undefined, { month: 'long', day: 'numeric' }) : "Not saved";
+  const formattedTime = lastSavedTime
+    ? new Date(lastSavedTime).toLocaleString(undefined, { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : "Not saved";
 
   return (
     <nav className={navbarClass}>
@@ -51,10 +53,10 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
         </span>
         {mode === 'chat' && (
           <div className="d-flex align-items-center">
-            <span className="me-2" style={{ cursor: 'pointer' }} onClick={onSummarize}>
-              {hasNewMessages ? `New messages since: ${formattedTime}` : `Last saved: ${formattedTime}`}
+            <span className="me-2" style={{ cursor: hasMessages ? 'pointer' : 'default' }} onClick={hasMessages ? onSummarize : undefined}>
+              {hasMessages ? (hasNewMessages ? `New messages since: ${formattedTime}` : `Last saved: ${formattedTime}`) : ''}
             </span>
-            <button className="btn btn-outline-primary" onClick={onSummarize}>
+            <button className="btn btn-outline-primary" onClick={hasMessages ? onSummarize : undefined} disabled={!hasMessages}>
               <i className="bi bi-check2-square"></i>
             </button>
           </div>

@@ -3,7 +3,7 @@ import { collection, query, getDocs, deleteDoc, doc, addDoc, serverTimestamp, or
 import { auth, firestore } from '../firebase.jsx';
 import { useSidebarHandlers } from './sidebar_hooks.jsx';
 
-function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCollapsed }) {
+function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCollapsed, messages }) {
   const [conversations, setConversations] = useState([]);
   const [hoveredConversationId, setHoveredConversationId] = useState(null);
   const [dropdownVisibleId, setDropdownVisibleId] = useState(null);
@@ -11,6 +11,7 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
 
   const { handleNewConversation, handleDeleteWithMemories, handleConversationClick } = useSidebarHandlers({
     activeConversationId,
+    messages,
     conversations,
     setActiveConversationId,
     setConversations,

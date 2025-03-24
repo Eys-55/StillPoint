@@ -1,45 +1,69 @@
 import React, { useState } from 'react';
 import { auth } from '../firebase.jsx';
-import { signInWithPopup, GoogleAuthProvider, FacebookAuthProvider } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { Container, Card, CardContent, TextField, Button, Typography, Box, CssBaseline } from '@mui/material';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+
+const theme = createTheme({
+  palette: {
+    mode: 'dark',
+  },
+});
 
 function Login() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError('');
     try {
-      await signInWithPopup(auth, provider);
-      navigate('/home');
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const handleFacebookLogin = async () => {
-    const provider = new FacebookAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-      navigate('/home');
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate('/');
     } catch (err) {
       setError(err.message);
     }
   };
 
   return (
-    <div className="container my-5 d-flex flex-column align-items-center">
-      <h1 className="mb-4">Welcome</h1>
-      {error && <div className="alert alert-danger w-50 text-center">{error}</div>}
-      <div className="w-50">
-        <button className="btn btn-primary w-100 mb-3" onClick={handleGoogleLogin}>
-          Sign in with Google
-        </button>
-        <button className="btn btn-primary w-100" onClick={handleFacebookLogin}>
-          Sign in with Facebook
-        </button>
-      </div>
-    </div>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Container maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        <Card sx={{ width: '100%', p: 2, borderRadius: 2 }}>
+          <CardContent>
+            <Typography variant="h4" align="center" gutterBottom>
+              Login
+            </Typography>
+            {error && <Typography color="error" align="center">{error}</Typography>}
+            <Box component="form" onSubmit={handleLogin} sx={{ mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Email"
+                variant="outlined"
+                margin="normal"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <TextField
+                fullWidth
+                label="Password"
+                type="password"
+                variant="outlined"
+                margin="normal"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <Button type="submit" variant="contained" fullWidth sx={{ mt: 2 }}>
+                Login
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      </Container>
+    </ThemeProvider>
   );
 }
 

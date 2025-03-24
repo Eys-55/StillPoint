@@ -9,6 +9,10 @@ import Sidebar from './sidebar.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useChatHandlers } from './chat_hooks.jsx';
 import { questions } from '../meta/questions.js';
+import { Box, TextField, IconButton, Paper } from '@mui/material';
+import MicIcon from '@mui/icons-material/Mic';
+import CheckIcon from '@mui/icons-material/Check';
+import SendIcon from '@mui/icons-material/Send';
 
 function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversationId, isSidebarCollapsed, setIsSidebarCollapsed }) {
   const [messages, setMessages] = useState([]);
@@ -19,11 +23,8 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [conversationLoaded, setConversationLoaded] = useState(false);
-  const [summaryModalVisible, setSummaryModalVisible] = useState(false);
-  const [summaryData, setSummaryData] = useState({ title: '', summary: '' });
   const [lastSavedTime, setLastSavedTime] = useState(null);
   const [lastMessageCountAtSave, setLastMessageCountAtSave] = useState(null);
-  const recordingIntervalRef = useRef(null);
   const chatSession = useRef(null);
   const navigate = useNavigate();
   const vertexAI = getVertexAI(app);
@@ -166,7 +167,7 @@ ${profileSummary.trim()}
   return (
     <>
       <Header
-        style={{ position: 'fixed', top: 0, width: '100%', zIndex: 1000 }}
+        sx={{ position: 'fixed', top: 0, width: '100%', zIndex: 1000 }}
         mode="chat"
         onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         onSummarize={handleSummarizeAndUpdate}
@@ -180,29 +181,33 @@ ${profileSummary.trim()}
           activeConversationId={activeConversationId}
           setActiveConversationId={setActiveConversationId}
           setIsSidebarCollapsed={setIsSidebarCollapsed}
+          darkMode={darkMode}
+          messages={messages}
         />
       )}
-      <div style={{ position: 'fixed', top: '60px', bottom: '160px', left: 0, right: 0, overflowY: 'auto', padding: '1rem' }}>
+      <Box sx={{ position: 'fixed', top: '60px', bottom: '160px', left: 0, right: 0, overflowY: 'auto', p: 2 }}>
         {activeConversationId && !conversationLoaded ? (
-          <div className="text-center">Loading conversation...</div>
+          <Box sx={{ textAlign: 'center' }}>Loading conversation...</Box>
         ) : (
           messages.map((msg, index) =>
             msg.role === 'user' ? (
-              <div key={index} className="mb-2 text-end">
-                <div className="d-inline-block p-2 bg-primary text-white rounded">
+              <Box key={index} sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                <Paper sx={{ p: 1, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
                   {msg.text}
-                </div>
-              </div>
+                </Paper>
+              </Box>
             ) : (
-              <div key={index} className="mb-2 text-start">
-                <div>{msg.text}</div>
-              </div>
+              <Box key={index} sx={{ mb: 2, display: 'flex', justifyContent: 'flex-start' }}>
+                <Paper sx={{ p: 1 }}>
+                  {msg.text}
+                </Paper>
+              </Box>
             )
           )
         )}
-        {loading && <div className="text-center">Loading...</div>}
-      </div>
-      <div style={{ position: 'fixed', bottom: '60px', left: 0, right: 0, padding: '0 1rem 20px' }}>
+        {loading && <Box sx={{ textAlign: 'center' }}>Loading...</Box>}
+      </Box>
+      <Box sx={{ position: 'fixed', bottom: '60px', left: 0, right: 0, p: 2 }}>
         <form onSubmit={(e) => {
           console.log("prompts.system:", prompts.system);
           console.log("bundledSummaries:", bundledSummaries);
@@ -210,9 +215,11 @@ ${profileSummary.trim()}
           console.log("userProfile:", userProfile);
           handleSubmit(e);
         }}>
-          <div className="d-flex align-items-stretch">
-            <textarea
-              className="form-control rounded"
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <TextField
+              multiline
+              fullWidth
+              variant="outlined"
               placeholder="Type your message..."
               value={loading ? "Loading..." : (isRecording ? `Recording: ${recordingTime}s` : input)}
               onChange={(e) => setInput(e.target.value)}
@@ -223,22 +230,34 @@ ${profileSummary.trim()}
                 }
               }}
               disabled={loading || isRecording}
-              style={{ minHeight: '60px', maxHeight: '200px', resize: 'none', overflowY: 'auto' }}
-              wrap="soft"
-            ></textarea>
-            <div className="d-flex align-items-center ms-2">
-              <button type="button" onClick={handleVoiceButton} className="btn btn-outline-secondary btn-sm rounded-circle me-1">
-                {isRecording ? <i className="bi bi-check"></i> : <i className="bi bi-mic"></i>}
-              </button>
-              <button className="btn btn-primary btn-sm rounded-circle" type="submit" disabled={loading || isRecording}>
-                <i className="bi bi-arrow-up-circle-fill"></i>
-              </button>
-            </div>
-          </div>
+              sx={{
+                minHeight: '60px',
+                maxHeight: '200px',
+                overflowY: 'auto'
+              }}
+              InputProps={{
+                sx: {
+                  backgroundColor: darkMode ? '#424242' : '#fff',
+                  color: darkMode ? '#fff' : '#000',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: darkMode ? '#424242' : 'rgba(0, 0, 0, 0.23)',
+                  }
+                }
+              }}
+            />
+            <Box sx={{ ml: 2 }}>
+              <IconButton onClick={handleVoiceButton} sx={{ color: darkMode ? '#fff' : 'inherit' }}>
+                {isRecording ? <CheckIcon /> : <MicIcon />}
+              </IconButton>
+              <IconButton type="submit" disabled={loading || isRecording} sx={{ color: darkMode ? '#fff' : 'inherit' }}>
+                <SendIcon />
+              </IconButton>
+            </Box>
+          </Box>
         </form>
-      </div>
+      </Box>
       <Footer
-        style={{ position: 'fixed', bottom: 0, width: '100%' }}
+        sx={{ position: 'fixed', bottom: 0, width: '100%' }}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
         conversationActive={true}

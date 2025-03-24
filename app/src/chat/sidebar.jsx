@@ -1,23 +1,26 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { collection, query, getDocs, deleteDoc, doc, addDoc, serverTimestamp, orderBy, onSnapshot } from 'firebase/firestore';
+import { Box, IconButton, List, ListItem, ListItemText, Menu, MenuItem } from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import AddIcon from '@mui/icons-material/Add';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { auth, firestore } from '../firebase.jsx';
 import { useSidebarHandlers } from './sidebar_hooks.jsx';
 
-function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCollapsed, messages }) {
+function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCollapsed, messages, darkMode }) {
   const [conversations, setConversations] = useState([]);
-  const [hoveredConversationId, setHoveredConversationId] = useState(null);
-  const [dropdownVisibleId, setDropdownVisibleId] = useState(null);
-  const isDarkMode = document.body.getAttribute("data-bs-theme") === "dark";
-
+  const sidebarRef = useRef(null);
   const { handleNewConversation, handleDeleteWithMemories, handleConversationClick } = useSidebarHandlers({
     activeConversationId,
     messages,
     conversations,
     setActiveConversationId,
     setConversations,
-    setIsSidebarCollapsed,
-    setDropdownVisibleId
+    setIsSidebarCollapsed
   });
+
+  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
+  const [menuConversationId, setMenuConversationId] = useState(null);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -40,110 +43,59 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
     }
   }, []);
 
-  const sidebarRef = useRef(null);
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
-        setIsSidebarCollapsed(true);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [setIsSidebarCollapsed]);
-
-  useEffect(() => {
-    if (dropdownVisibleId) {
-      const handleClickOutside = (event) => {
-        if (!event.target.closest('.dropdown-menu-sidebar')) {
-          setDropdownVisibleId(null);
-        }
-      };
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [dropdownVisibleId]);
-
   return (
-    <>
-      <div ref={sidebarRef} className="sidebar">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <button onClick={() => setIsSidebarCollapsed(true)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>
-            <i className="bi bi-x"></i>
-          </button>
-          <button onClick={handleNewConversation} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>
-            <i className="bi bi-plus"></i>
-          </button>
-        </div>
-        <div>
-          {conversations.map(conv => (
-            <div
-              key={conv.id}
-              style={{
-                position: 'relative',
-                marginBottom: '0.5rem',
-                cursor: 'pointer',
-                padding: '0.5rem',
-                backgroundColor: conv.id === activeConversationId ? (isDarkMode ? '#495057' : '#e9ecef') : 'transparent'
+    <Box ref={sidebarRef} className="sidebar" sx={{ width: 300, p: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <IconButton onClick={() => setIsSidebarCollapsed(true)} sx={{ color: darkMode ? '#fff' : 'inherit' }}>
+          <CloseIcon />
+        </IconButton>
+        <IconButton onClick={handleNewConversation} sx={{ color: darkMode ? '#fff' : 'inherit' }}>
+          <AddIcon />
+        </IconButton>
+      </Box>
+      <List>
+        {conversations.map(conv => (
+          <ListItem
+            button
+            key={conv.id}
+            selected={conv.id === activeConversationId}
+            onClick={() => handleConversationClick(conv.id)}
+          >
+            <ListItemText primary={conv.title.replace(/^Title:\s*/i, '')} />
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuAnchorEl(e.currentTarget);
+                setMenuConversationId(conv.id);
               }}
-              onMouseEnter={() => setHoveredConversationId(conv.id)}
-              onMouseLeave={() => setHoveredConversationId(null)}
-              onClick={() => handleConversationClick(conv.id)}
+              sx={{ color: darkMode ? '#fff' : 'inherit' }}
             >
-              {conv.title.replace(/^Title:\s*/i, '')}
-              {hoveredConversationId === conv.id && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDropdownVisibleId(prev => prev === conv.id ? null : conv.id);
-                  }}
-                  style={{
-                    position: 'absolute',
-                    right: '5px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '1rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <i className="bi bi-three-dots"></i>
-                </button>
-              )}
-              {dropdownVisibleId === conv.id && (
-                <div
-                  className="dropdown-menu-sidebar"
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    right: '5px',
-                    backgroundColor: isDarkMode ? '#343a40' : '#fff',
-                    color: isDarkMode ? '#fff' : '#000',
-                    border: isDarkMode ? '1px solid #444' : '1px solid #ddd',
-                    padding: '0.5rem',
-                    zIndex: 1100
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={() => { alert("Rename functionality not implemented."); setDropdownVisibleId(null); }}
-                    style={{ background: 'none', border: 'none', display: 'block', width: '100%', textAlign: 'left', padding: '0.25rem 0' }}
-                  >
-                    Rename
-                  </button>
-                  <button
-                    onClick={() => handleDeleteWithMemories(conv)}
-                    style={{ background: 'none', border: 'none', display: 'block', width: '100%', textAlign: 'left', padding: '0.25rem 0' }}
-                  >
-                    Delete with Memories
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </>
+              <MoreVertIcon />
+            </IconButton>
+          </ListItem>
+        ))}
+      </List>
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl) && menuConversationId !== null}
+        onClose={() => {
+          setMenuAnchorEl(null);
+          setMenuConversationId(null);
+        }}
+      >
+        <MenuItem onClick={() => { alert("Rename functionality not implemented."); setMenuAnchorEl(null); setMenuConversationId(null); }}>
+          Rename
+        </MenuItem>
+        <MenuItem onClick={() => {
+          const conv = conversations.find(c => c.id === menuConversationId);
+          handleDeleteWithMemories(conv);
+          setMenuAnchorEl(null);
+          setMenuConversationId(null);
+        }}>
+          Delete with Memories
+        </MenuItem>
+      </Menu>
+    </Box>
   );
 }
 

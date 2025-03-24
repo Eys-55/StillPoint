@@ -3,6 +3,8 @@ import { auth } from '../firebase.jsx';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { updateProfile, deleteUser } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { Container, Card, CardContent, Typography, TextField, Button, Box, Alert, CssBaseline } from '@mui/material';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 
 function Settings({ darkMode, setDarkMode }) {
   const [user, loading] = useAuthState(auth);
@@ -16,13 +18,11 @@ function Settings({ darkMode, setDarkMode }) {
     }
   }, [user]);
 
-  useEffect(() => {
-    document.body.setAttribute("data-bs-theme", darkMode ? "dark" : "light");
-  }, [darkMode]);
-
-  const toggleDarkMode = () => {
-    setDarkMode(prev => !prev);
-  };
+  const theme = createTheme({
+    palette: {
+      mode: darkMode ? 'dark' : 'light',
+    },
+  });
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -47,43 +47,59 @@ function Settings({ darkMode, setDarkMode }) {
     }
   };
 
-  if (loading) return <div className="text-center py-5">Loading...</div>;
-  if (!user) return <div className="text-center py-5">Please log in to view settings.</div>;
+  if (loading) return (
+    <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Typography>Loading...</Typography>
+    </Container>
+  );
+  if (!user) return (
+    <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Typography>Please log in to view settings.</Typography>
+    </Container>
+  );
 
   return (
-    <div className="card mx-auto" style={{ maxWidth: '600px', marginTop: '50px' }}>
-      <div className="card-body">
-        <h1 className="card-title mb-4">User Settings</h1>
-        {message && <div className="alert alert-info">{message}</div>}
-        <form onSubmit={handleSave}>
-          <div className="mb-3">
-            <label htmlFor="name" className="form-label">Display Name</label>
-            <input
-              type="text"
-              className="form-control"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-          <button type="submit" className="btn btn-primary w-100 mb-3">Save Changes</button>
-        </form>
-        <hr />
-        <h2 className="h5">Privacy and Data Management</h2>
-        <p className="mb-3">
-          You have full control over your personal data. Edit your information and manage how your data is used.
-        </p>
-        <button className="btn btn-danger w-100" onClick={handleDeleteAccount}>
-          Delete Account
-        </button>
-        <button className="btn btn-secondary w-100 mt-3" onClick={() => navigate('/privacy')}>
-          Privacy Policy
-        </button>
-        <button className="btn btn-secondary w-100 mt-3" onClick={toggleDarkMode}>
-          {darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-        </button>
-      </div>
-    </div>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Container maxWidth="sm" sx={{ mt: 5 }}>
+        <Card sx={{ borderRadius: 2 }}>
+          <CardContent>
+            <Typography variant="h4" align="center" gutterBottom>
+              User Settings
+            </Typography>
+            {message && <Alert severity="info" sx={{ mb: 2 }}>{message}</Alert>}
+            <Box component="form" onSubmit={handleSave} sx={{ mt: 2 }}>
+              <TextField
+                fullWidth
+                label="Display Name"
+                variant="outlined"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+              <Button type="submit" variant="contained" fullWidth sx={{ mb: 2 }}>
+                Save Changes
+              </Button>
+            </Box>
+            <Typography variant="h6" gutterBottom>
+              Privacy and Data Management
+            </Typography>
+            <Typography sx={{ mb: 2 }}>
+              You have full control over your personal data. Edit your information and manage how your data is used.
+            </Typography>
+            <Button variant="contained" color="error" fullWidth onClick={handleDeleteAccount} sx={{ mb: 2 }}>
+              Delete Account
+            </Button>
+            <Button variant="outlined" fullWidth onClick={() => navigate('/privacy')} sx={{ mb: 2 }}>
+              Privacy Policy
+            </Button>
+            <Button variant="outlined" fullWidth onClick={() => setDarkMode(prev => !prev)}>
+              {darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            </Button>
+          </CardContent>
+        </Card>
+      </Container>
+    </ThemeProvider>
   );
 }
 

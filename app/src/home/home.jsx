@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Header from '../nav/header.jsx';
 import { auth, firestore } from '../firebase.jsx';
 import { doc, getDoc } from 'firebase/firestore';
+import Tracker from './tracker.jsx';
 
 function Home() {
   const navigate = useNavigate();
@@ -56,6 +57,7 @@ function Home() {
         <div>
           <p>This is your home page. Here you can view your stats and learn about the app features.</p>
           <p>Placeholder for stats and additional details.</p>
+          <Tracker />
           <div className="d-flex gap-2">
             <button className="btn btn-secondary" onClick={handleProfile}>
               View Profile

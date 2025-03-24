@@ -22,7 +22,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
   const [summaryModalVisible, setSummaryModalVisible] = useState(false);
   const [summaryData, setSummaryData] = useState({ title: '', summary: '' });
   const [lastSavedTime, setLastSavedTime] = useState(null);
-  const [lastMessageCountAtSave, setLastMessageCountAtSave] = useState(0);
+  const [lastMessageCountAtSave, setLastMessageCountAtSave] = useState(null);
   const recordingIntervalRef = useRef(null);
   const chatSession = useRef(null);
   const navigate = useNavigate();
@@ -40,20 +40,20 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
       if (conversationDoc.exists()) {
         initialHistory = conversationDoc.data().messages;
         setMessages(initialHistory);
-        const updatedAt = conversationDoc.data().updatedAt;
-        if (updatedAt) {
-          setLastSavedTime(updatedAt.toDate());
+        const summarizedAt = conversationDoc.data().summarizedAt;
+        if (summarizedAt) {
+          setLastSavedTime(summarizedAt.toDate());
           setLastMessageCountAtSave(initialHistory.length);
         } else {
           setLastSavedTime(null);
-          setLastMessageCountAtSave(0);
+          setLastMessageCountAtSave(null);
         }
       } else {
         initialHistory = [];
         setMessages(initialHistory);
         await setDoc(conversationDocRef, { messages: initialHistory, title: "New Conversation" });
         setLastSavedTime(null);
-        setLastMessageCountAtSave(0);
+        setLastMessageCountAtSave(null);
       }
       const formattedHistory = initialHistory.map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
@@ -172,7 +172,7 @@ ${profileSummary.trim()}
         onSummarize={handleSummarizeAndUpdate}
         darkMode={darkMode}
         lastSavedTime={lastSavedTime}
-        hasNewMessages={messages.length > lastMessageCountAtSave}
+        hasNewMessages={lastSavedTime ? (messages.length > lastMessageCountAtSave) : false}
         hasMessages={messages.length > 0}
       />
       {!isSidebarCollapsed && (

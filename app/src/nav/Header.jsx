@@ -54,7 +54,7 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
         {mode === 'chat' && (
           <div className="d-flex align-items-center">
             <span className="me-2" style={{ cursor: hasMessages ? 'pointer' : 'default' }} onClick={hasMessages ? onSummarize : undefined}>
-              {hasMessages ? (hasNewMessages ? `New messages since: ${formattedTime}` : `Last saved: ${formattedTime}`) : ''}
+              {hasMessages ? (lastSavedTime ? (hasNewMessages ? `New messages since: ${formattedTime}` : `Last saved: ${formattedTime}`) : "Not saved") : ''}
             </span>
             <button className="btn btn-outline-primary" onClick={hasMessages ? onSummarize : undefined} disabled={!hasMessages}>
               <i className="bi bi-check2-square"></i>

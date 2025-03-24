@@ -89,7 +89,7 @@ function Sidebar({ activeConversationId, setActiveConversationId, setIsSidebarCo
               onMouseLeave={() => setHoveredConversationId(null)}
               onClick={() => handleConversationClick(conv.id)}
             >
-              {conv.title}
+              {conv.title.replace(/^Title:\s*/i, '')}
               {hoveredConversationId === conv.id && (
                 <button
                   onClick={(e) => {

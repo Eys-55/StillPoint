@@ -54,8 +54,15 @@ export function useSummaries(conversationId, initialMessages) {
       const resultCombined = await model.generateContent(combinedPrompt);
       const responseText = resultCombined.response.text();
       const lines = responseText.split("\n").filter(line => line.trim() !== "");
-      const generatedTitle = lines[0].replace(/\*\*/g, '').trim();
-      const generatedSummary = lines.slice(1).join("\n").trim();
+      
+      let generatedTitle = lines[0].replace(/\*\*/g, '').trim();
+      if (generatedTitle.toLowerCase().startsWith("title:")) {
+        generatedTitle = generatedTitle.slice(6).trim();
+      }
+      let generatedSummary = lines.slice(1).join("\n").trim();
+      if (generatedSummary.toLowerCase().startsWith("summary:")) {
+        generatedSummary = generatedSummary.slice(8).trim();
+      }
 
       setSummary(generatedSummary);
       setTitle(generatedTitle);

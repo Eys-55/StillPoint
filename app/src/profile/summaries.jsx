@@ -2,6 +2,8 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../nav/header.jsx';
 import { useSummaries } from './summaries_hooks.jsx';
+import { auth, firestore } from '../firebase.jsx';
+import { doc, updateDoc } from 'firebase/firestore';
 
 function Summaries() {
   const location = useLocation();
@@ -30,6 +32,18 @@ function Summaries() {
     handleEditSummary,
   } = useSummaries(conversationId, initialMessages);
 
+  const handleDeleteMemory = async (id) => {
+    if (!window.confirm("Are you sure you want to delete the summary memory?")) return;
+    try {
+      const convRef = doc(firestore, 'users', auth.currentUser.uid, 'conversations', id);
+      // Clear only the summary field, leaving the title intact
+      await updateDoc(convRef, { summary: '' });
+      window.location.reload();
+    } catch (err) {
+      alert("Error deleting summary memory: " + err.message);
+    }
+  };
+
   return (
     <div>
       <Header
@@ -52,7 +66,7 @@ function Summaries() {
                     type="text"
                     className="form-control"
                     placeholder="Title"
-                    value={title}
+                    value={title.replace(/^Title:\s*/i, '')}
                     onChange={(e) => setTitle(e.target.value)}
                   />
                   <button
@@ -66,7 +80,7 @@ function Summaries() {
                   className="form-control mb-3"
                   rows="6"
                   placeholder="Summary"
-                  value={summary}
+                  value={summary.replace(/^Summary:\s*/i, '')}
                   onChange={(e) => setSummary(e.target.value)}
                 ></textarea>
                 <button className="btn btn-primary" onClick={saveSummary}>
@@ -87,7 +101,7 @@ function Summaries() {
                 <div key={item.id} className="card mb-3" style={{ position: 'relative' }}>
                   <div className="card-body">
                     <div className="d-flex justify-content-between">
-                      <h5 className="card-title">{item.title}</h5>
+                      <h5 className="card-title">{item.title.replace(/^Title:\s*/i, '')}</h5>
                       <button
                         className="btn btn-link"
                         onClick={(e) => {
@@ -98,7 +112,7 @@ function Summaries() {
                         <i className="bi bi-three-dots"></i>
                       </button>
                     </div>
-                    <p className="card-text">{item.summary}</p>
+                    <p className="card-text">{item.summary.replace(/^Summary:\s*/i, '')}</p>
                     {dropdownSummaryId === item.id && (
                       <div
                         className="dropdown-menu show"
@@ -117,8 +131,11 @@ function Summaries() {
                         <button className="dropdown-item" onClick={() => handleEditSummary(item.id)} style={{ background: 'none', border: 'none' }}>
                           Edit
                         </button>
-                        <button className="dropdown-item" onClick={() => handleDeleteSummary(item.id)} style={{ background: 'none', border: 'none' }}>
+                        <button className="dropdown-item" onClick={() => handleDeleteMemory(item.id)} style={{ background: 'none', border: 'none' }}>
                           Delete
+                        </button>
+                        <button className="dropdown-item" onClick={() => handleDeleteSummary(item.id)} style={{ background: 'none', border: 'none' }}>
+                          Delete with Conversation
                         </button>
                       </div>
                     )}

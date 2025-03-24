@@ -176,6 +176,7 @@ export const useChatHandlers = ({
         summary: generatedSummary,
         title: generatedTitle,
         ended: true,
+        summarizedAt: serverTimestamp()
       });
       return { title: generatedTitle, summary: generatedSummary };
     } catch (err) {

@@ -3,67 +3,125 @@ import { auth, firestore } from '../firebase.jsx';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { questions } from '../meta/questions.js';
 import { useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  Box,
+  LinearProgress,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
+  FormLabel,
+  CircularProgress,
+  Fade,
+} from '@mui/material';
 
 function Questionnaire() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState([]);
+  const [answers, setAnswers] = useState(Array(questions.length).fill(null)); // Initialize with nulls
   const [loading, setLoading] = useState(true);
   const [isEditable, setIsEditable] = useState(false);
-  const [fade, setFade] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [fade, setFade] = useState(true); // Start visible for initial load
   const user = auth.currentUser;
   const navigate = useNavigate();
 
-  // Check if questionnaire responses already exist
   useEffect(() => {
     async function checkQuestionnaire() {
+      setLoading(true); // Start loading
+      const initializeEmptyAnswers = () => questions.map(q => ({ question: q.question, answer: "" }));
+
       if (user) {
         const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          // Set answers from stored data, ensuring the array aligns with questions length
-          const storedAnswers = docSnap.data().answers || [];
-          setAnswers(storedAnswers);
-          setIsEditable(true);
+        try {
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists() && docSnap.data().answers) {
+            // CORRECTED LINE: Provide default empty array if answers doesn't exist
+            const storedAnswers = docSnap.data().answers ||[]; // Get stored answers array
+            
+            // Create a map for quick lookup of stored answers by question text
+            const storedAnswersMap = new Map(storedAnswers.map(a => [a.question, a.answer]));
+
+            // Map questions to answers, ensuring order and filling gaps
+            const fullAnswers = questions.map(q => ({
+              question: q.question,
+              answer: storedAnswersMap.get(q.question) || "" // Get stored answer or default to empty string
+            }));
+
+            setAnswers(fullAnswers);
+            setIsEditable(true); // Go directly to edit mode if data exists
+          } else {
+             // Initialize answers with empty structure if no document or answers array exists
+            setAnswers(initializeEmptyAnswers());
+            setIsEditable(false); // Start in interactive mode if no previous answers
+          }
+        } catch (error) {
+          console.error("Error fetching questionnaire:", error);
+          // Handle error appropriately, maybe show a message to the user
+          // Initialize with empty structure on error as well
+           setAnswers(initializeEmptyAnswers());
+           setIsEditable(false);
         }
+      } else {
+        // Handle case where user is not logged in
+         console.warn("User not logged in, cannot fetch questionnaire.");
+         // Initialize with empty structure
+         setAnswers(initializeEmptyAnswers());
+         setIsEditable(false);
       }
-      setLoading(false);
+      setLoading(false); // Finish loading
     }
     checkQuestionnaire();
-  }, [user, navigate]);
-
-  // Fade effect for interactive mode only
+  }, [user]); // Dependency array only includes user
+  // Fade effect for interactive mode transitions
   useEffect(() => {
-    if (!isEditable) {
-      setFade(false);
-      const timer = setTimeout(() => setFade(true), 50);
-      return () => clearTimeout(timer);
+    if (!isEditable && !loading) {
+      setFade(true); // Ensure fade-in happens when component is ready
     }
-  }, [currentQuestionIndex, isEditable]);
+  }, [currentQuestionIndex, isEditable, loading]);
 
-  // Interactive mode: handle answer selection for first-time responses
+  const transitionQuestion = (callback) => {
+    setFade(false);
+    setTimeout(() => {
+      callback();
+      setFade(true);
+    }, 300); // Match timeout with CSS transition duration if needed
+  };
+
+  // Interactive mode: handle answer selection
   const handleAnswer = async (option) => {
     const newAnswer = { question: questions[currentQuestionIndex].question, answer: option };
-    const newAnswers = [...answers, newAnswer];
-    setAnswers(newAnswers);
+    const updatedAnswers = [...answers];
+    updatedAnswers[currentQuestionIndex] = newAnswer;
+    setAnswers(updatedAnswers);
+
     if (currentQuestionIndex < questions.length - 1) {
-      setTimeout(() => {
+      transitionQuestion(() => {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
-      }, 300);
+      });
     } else {
+      setSaving(true); // Indicate saving process
       const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
       try {
-        await setDoc(docRef, { answers: newAnswers, completedAt: new Date().toISOString() });
+        await setDoc(docRef, { answers: updatedAnswers, completedAt: new Date().toISOString() }, { merge: true }); // Use merge to be safe
+        navigate('/profile');
       } catch (err) {
         console.error("Error saving questionnaire:", err);
+        setSaving(false); // Reset saving state on error
+        // Show error message to user
       }
-      navigate('/profile');
+      // No need to setSaving(false) on success as we navigate away
     }
   };
 
-  // Edit mode: handle selection update for an answer
+  // Edit mode: handle selection update
   const handleSelectOption = (qIndex, option) => {
     const updatedAnswers = [...answers];
-    // Ensure an answer object exists for this question; if not, create one
+    // Ensure an answer object exists, though initialization should prevent this need
     if (!updatedAnswers[qIndex]) {
       updatedAnswers[qIndex] = { question: questions[qIndex].question, answer: option };
     } else {
@@ -75,72 +133,133 @@ function Questionnaire() {
   // Save updated answers in edit mode
   const handleSaveEdit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
     try {
-      await setDoc(docRef, { answers, completedAt: new Date().toISOString() });
+      // Filter out any potentially null entries before saving, though ideally 'answers' state is always full
+      const finalAnswers = answers.filter(a => a !== null && a.answer !== "");
+      await setDoc(docRef, { answers: finalAnswers, completedAt: new Date().toISOString() }, { merge: true });
       navigate('/profile');
     } catch (err) {
       console.error("Error updating questionnaire:", err);
+      setSaving(false);
+      // Show error message to user
     }
   };
 
-  if (loading) return <div className="container my-5 text-center">Loading questionnaire...</div>;
-
-  if (isEditable) {
-    // Render all questions in edit mode with selectable options
+  if (loading) {
     return (
-      <div className="container my-5">
-        <div className="card mx-auto" style={{ maxWidth: "600px" }}>
-          <div className="card-body">
-            <h5 className="card-title">Edit Questionnaire Responses</h5>
-            <form onSubmit={handleSaveEdit}>
-              {questions.map((q, idx) => {
-                // Get current selected answer if available
-                const currentAnswer = answers[idx] ? answers[idx].answer : "";
-                return (
-                  <div key={idx} className="mb-3">
-                    <p><strong>Q:</strong> {q.question}</p>
-                    <div>
-                      {q.options.map((option, optionIdx) => (
-                        <button
-                          type="button"
-                          key={optionIdx}
-                          className={`btn m-1 ${currentAnswer === option ? "btn-primary" : "btn-outline-primary"}`}
-                          onClick={() => handleSelectOption(idx, option)}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-              <button type="submit" className="btn btn-primary">Save Changes</button>
-              <button type="button" className="btn btn-secondary ms-2" onClick={() => navigate('/profile')}>Cancel</button>
-            </form>
-          </div>
-        </div>
-      </div>
+      <Container maxWidth="sm" sx={{ mt: 5, textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>Loading questionnaire...</Typography>
+      </Container>
     );
   }
 
-  // Interactive mode for first-time answering
+  // Edit Mode UI
+  if (isEditable) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
+        <Card>
+          <CardContent>
+            <Typography variant="h5" component="div" gutterBottom>
+              Edit Questionnaire Responses
+            </Typography>
+            <form onSubmit={handleSaveEdit}>
+              {questions.map((q, idx) => {
+                const currentAnswer = answers[idx] ? answers[idx].answer : "";
+                return (
+                  <FormControl component="fieldset" key={idx} sx={{ mb: 3, width: '100%' }}>
+                    <FormLabel component="legend" sx={{ mb: 1 }}>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {idx + 1}. {q.question}
+                      </Typography>
+                    </FormLabel>
+                    {/* Assuming single choice based on original interactive mode */}
+                    <RadioGroup
+                      aria-label={q.question}
+                      name={`question-${idx}`}
+                      value={currentAnswer}
+                      onChange={(e) => handleSelectOption(idx, e.target.value)}
+                    >
+                      {q.options.map((option, optionIdx) => (
+                        <FormControlLabel
+                          key={optionIdx}
+                          value={option}
+                          control={<Radio />}
+                          label={option}
+                        />
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+                );
+              })}
+              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                <Button
+                    variant="outlined"
+                    onClick={() => navigate('/profile')}
+                    disabled={saving}
+                    color="secondary"
+                >
+                    Cancel
+                </Button>
+                <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={saving}
+                    startIcon={saving ? <CircularProgress size={20} color="inherit" /> : null}
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </Box>
+            </form>
+          </CardContent>
+        </Card>
+      </Container>
+    );
+  }
+
+  // Interactive Mode UI
+  const currentQ = questions[currentQuestionIndex];
+  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+
   return (
-    <div className="container my-5">
-      <div className="card mx-auto" style={{ maxWidth: "600px" }}>
-        <div className={`card-body fade ${fade ? "show" : ""}`}>
-          <h5 className="card-title">Question {currentQuestionIndex + 1} of {questions.length}</h5>
-          <p className="card-text">{questions[currentQuestionIndex].question}</p>
-          <div>
-            {questions[currentQuestionIndex].options.map((option, idx) => (
-              <button key={idx} className="btn btn-outline-primary m-1" onClick={() => handleAnswer(option)}>
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+    <Container maxWidth="sm" sx={{ mt: 5 }}>
+      <Box sx={{ width: '100%', mb: 2 }}>
+        <LinearProgress variant="determinate" value={progress} />
+      </Box>
+      <Fade in={fade} timeout={300}>
+        <Card>
+          <CardContent>
+            <Typography variant="overline" display="block" gutterBottom>
+              Question {currentQuestionIndex + 1} of {questions.length}
+            </Typography>
+            <Typography variant="h6" component="div" sx={{ mb: 3 }}>
+              {currentQ.question}
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              {currentQ.options.map((option, idx) => (
+                <Button
+                  key={idx}
+                  variant="outlined"
+                  fullWidth
+                  onClick={() => handleAnswer(option)}
+                  sx={{ justifyContent: 'flex-start', textTransform: 'none', py: 1.5, px: 2 }} // Nicer button layout
+                >
+                  {option}
+                </Button>
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
+      </Fade>
+       {saving && ( // Show saving indicator at the bottom in interactive mode too
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+            <CircularProgress />
+            <Typography sx={{ ml: 1 }}>Saving...</Typography>
+          </Box>
+        )}
+    </Container>
   );
 }
 

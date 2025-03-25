@@ -5,81 +5,145 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
-import Header from '../nav/header.jsx';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import CircularProgress from '@mui/material/CircularProgress';
+import Header from '../nav/header.jsx'; // Assuming Header adapts or doesn't need explicit mode
 import { auth, firestore } from '../firebase.jsx';
 import { doc, getDoc } from 'firebase/firestore';
 import Tracker from './tracker.jsx';
+import PsychologyIcon from '@mui/icons-material/Psychology';
+import ChatIcon from '@mui/icons-material/Chat';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import DescriptionIcon from '@mui/icons-material/Description';
 
 function Home() {
   const navigate = useNavigate();
-  const [questionnaireCompleted, setQuestionnaireCompleted] = useState(null);
+  const [questionnaireCompleted, setQuestionnaireCompleted] = useState(null); // null = loading, true/false = checked
+  const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
-    async function checkQuestionnaire() {
+    const checkUserStatus = async () => {
+      setLoading(true);
       const user = auth.currentUser;
       if (user) {
+        setUserName(user.displayName || 'User'); // Get display name
         const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
-        const docSnap = await getDoc(docRef);
-        setQuestionnaireCompleted(docSnap.exists());
+        try {
+          const docSnap = await getDoc(docRef);
+          setQuestionnaireCompleted(docSnap.exists());
+        } catch (error) {
+          console.error("Error checking questionnaire status:", error);
+          setQuestionnaireCompleted(false);
+        }
       } else {
         setQuestionnaireCompleted(false);
+        setUserName('');
+        // No need to navigate here, ProtectedRoute handles it
       }
-    }
-    checkQuestionnaire();
-  }, []);
+      setLoading(false);
+    };
 
-  const handleChat = () => {
-    if (!questionnaireCompleted) {
-      alert("Please answer the questionnaire first.");
+    // Use onAuthStateChanged for reliability
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      if (user) {
+        checkUserStatus();
+      } else {
+        // If user becomes null (logged out), ProtectedRoute will handle redirect
+        setLoading(false);
+        setUserName('');
+        setQuestionnaireCompleted(false);
+      }
+    });
+
+    return () => unsubscribe();
+
+  }, []); // No navigate dependency needed here
+
+  const handleNavigation = (path) => {
+    if (questionnaireCompleted === false && path !== '/get-started') {
+      alert("Please complete the questionnaire first to access this feature.");
       return;
     }
-    navigate('/chat');
+    navigate(path);
   };
 
-  const handleProfile = () => {
-    if (!questionnaireCompleted) {
-      alert("Please answer the questionnaire first.");
-      return;
-    }
-    navigate('/profile');
-  };
+  // Loading state display
+  if (loading || questionnaireCompleted === null) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <div>
-      <Header mode="home" darkMode={document.body.getAttribute("data-bs-theme") === "dark"} />
-      <Container sx={{ my: 4 }}>
-        <Typography variant="h3" component="h1" gutterBottom>
-          Welcome to the Mental Health App
-        </Typography>
+    // Using Box with background.default ensures the theme's background color is applied
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
+       {/* Header might need darkMode prop if it has non-MUI elements needing style changes */}
+      <Header mode="home" />
+      <Container component="main" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
+        <Paper elevation={2} sx={{ p: { xs: 2, md: 4 }, mb: 3 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Welcome back, {userName}! <PsychologyIcon sx={{ verticalAlign: 'middle' }}/>
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Ready to continue your mental wellness journey? Here's a quick overview.
+          </Typography>
+        </Paper>
+
         {questionnaireCompleted === false && (
-          <Box sx={{ mb: 3 }}>
-            <Alert severity="warning" sx={{ mb: 2 }}>
-              You have not answered your questionnaire yet. Please complete it to receive personalized recommendations.
-            </Alert>
-            <Button variant="outlined" onClick={() => navigate('/get-started')}>
-              Answer Questionnaire
-            </Button>
-          </Box>
+          <Alert
+            severity="warning"
+            sx={{ mb: 3 }}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                startIcon={<DescriptionIcon />}
+                onClick={() => navigate('/get-started')} // Direct navigation is fine here
+              >
+                Answer Now
+              </Button>
+            }
+          >
+            Please complete your initial questionnaire to personalize your experience.
+          </Alert>
         )}
-        <Box>
-          <Typography variant="body1" paragraph>
-            This is your home page. Here you can view your stats and learn about the app features.
-          </Typography>
-          <Typography variant="body1" paragraph>
-            Placeholder for stats and additional details.
-          </Typography>
+
+        <Stack spacing={3}>
           <Tracker />
-          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-            <Button variant="contained" color="secondary" onClick={handleProfile}>
-              View Profile
-            </Button>
-            <Button variant="contained" color="primary" onClick={handleChat}>
-              Go to Chat
-            </Button>
-          </Box>
-        </Box>
+
+          <Paper elevation={2} sx={{ p: 2 }}>
+             <Typography variant="h6" gutterBottom>Quick Actions</Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<ChatIcon />}
+                onClick={() => handleNavigation('/chat')}
+                disabled={questionnaireCompleted === false}
+                sx={{ flexGrow: 1 }}
+              >
+                Start Chatting
+              </Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<AccountCircleIcon />}
+                onClick={() => handleNavigation('/profile')}
+                 disabled={questionnaireCompleted === false}
+                sx={{ flexGrow: 1 }}
+              >
+                View Profile & Summaries
+              </Button>
+            </Stack>
+          </Paper>
+        </Stack>
       </Container>
-    </div>
+      {/* Footer is now rendered conditionally in App.jsx */}
+    </Box>
   );
 }
 

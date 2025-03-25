@@ -1,32 +1,54 @@
 :root {
-  --header-font-size: 16px;
-  --body-font-size: 12px;
+  --header-font-size: 16px; /* These CSS variables might still be used elsewhere */
+  --body-font-size: 12px;   /* Or could be replaced by MUI theme typography */
 }
 
+/* Keep general body/heading styles if needed, or manage fully via MUI ThemeProvider */
 body {
   font-size: var(--body-font-size);
+  margin: 0; /* Ensure no default body margin */
+  padding: 0; /* Ensure no default body padding */
+  /* background-color is now handled by MUI CssBaseline and ThemeProvider */
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-size: var(--header-font-size);
 }
 
-.sidebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 300px;
-  height: 100%;
-  overflow-y: auto;
-  z-index: 1000;
-  padding: 1rem;
-  border-right: 1px solid #ddd;
-  background-color: #f8f9fa;
-  color: #000;
+/*
+  Removed .sidebar and body[data-bs-theme="dark"] .sidebar rules.
+  Styling is now applied directly via MUI components (Drawer, Box) and the sx prop
+  using the theme context provided by ThemeProvider in App.jsx.
+*/
+
+/* Optional: Global scrollbar styling (use with caution) */
+/*
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-body[data-bs-theme="dark"] .sidebar {
-  background-color: #343a40;
-  border-right: 1px solid #444;
-  color: #fff;
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
 }
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+body[data-bs-theme="dark"] ::-webkit-scrollbar-track {
+  background: #333;
+}
+
+body[data-bs-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #666;
+}
+
+body[data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+*/

@@ -1,8 +1,6 @@
 export const questions = [
   {
-    question: `<question>
-This is the question: How would you describe your current mental state in general?
-</question>`,
+    question: "How would you describe your current mental state in general?",
     type: "single",
     options: ["Mostly stable", "Frequently overwhelmed", "Up and down", "Mostly low or numb", "I’m not sure"],
     optionDetails: {
@@ -14,9 +12,7 @@ This is the question: How would you describe your current mental state in genera
     }
   },
   {
-    question: `<question>
-This is the question: Which statement feels closest to you?
-</question>`,
+    question: "Which statement feels closest to you?",
     type: "single",
     options: ["I know myself well", "I’m still figuring things out", "I feel disconnected from myself", "I want to understand myself more"],
     optionDetails: {
@@ -27,10 +23,8 @@ This is the question: Which statement feels closest to you?
     }
   },
   {
-    question: `<question>
-This is the question: How do you usually respond to stress?
-</question>`,
-    type: "multi",
+    question: "How do you usually respond to stress?",
+    type: "multi", // Note: The UI rewrite below assumes single choice for simplicity, adapt if multi-choice is needed.
     options: ["I overthink", "I shut down", "I get emotional", "I distract myself", "I try to solve it immediately"],
     optionDetails: {
       "I overthink": "The user tends to analyze situations excessively, which may increase stress.",
@@ -41,10 +35,8 @@ This is the question: How do you usually respond to stress?
     }
   },
   {
-    question: `<question>
-This is the question: Which of these emotions do you deal with most often?
-</question>`,
-    type: "multi",
+    question: "Which of these emotions do you deal with most often?",
+    type: "multi", // Note: The UI rewrite below assumes single choice for simplicity, adapt if multi-choice is needed.
     options: ["Anxiety", "Sadness", "Anger", "Guilt", "Loneliness", "Emptiness"],
     optionDetails: {
       "Anxiety": "The user frequently experiences worry or nervousness.",
@@ -56,10 +48,8 @@ This is the question: Which of these emotions do you deal with most often?
     }
   },
   {
-    question: `<question>
-This is the question: Which of these areas affect your mental health the most?
-</question>`,
-    type: "multi",
+    question: "Which of these areas affect your mental health the most?",
+    type: "multi", // Note: The UI rewrite below assumes single choice for simplicity, adapt if multi-choice is needed.
     options: ["Romantic relationships", "Family", "Friendships", "School/work pressure", "Financial worries", "Body image or self-esteem"],
     optionDetails: {
       "Romantic relationships": "The user finds that intimate relationships impact their mental well-being significantly.",
@@ -71,10 +61,8 @@ This is the question: Which of these areas affect your mental health the most?
     }
   },
   {
-    question: `<question>
-This is the question: How do you usually process your emotions?
-</question>`,
-    type: "multi",
+    question: "How do you usually process your emotions?",
+    type: "multi", // Note: The UI rewrite below assumes single choice for simplicity, adapt if multi-choice is needed.
     options: ["I talk to someone", "I keep them to myself", "I write or journal", "I ignore them", "I reflect quietly"],
     optionDetails: {
       "I talk to someone": "The user prefers discussing emotions with others to gain clarity.",
@@ -85,10 +73,8 @@ This is the question: How do you usually process your emotions?
     }
   },
   {
-    question: `<question>
-This is the question: What kind of support helps you the most?
-</question>`,
-    type: "multi",
+    question: "What kind of support helps you the most?",
+    type: "multi", // Note: The UI rewrite below assumes single choice for simplicity, adapt if multi-choice is needed.
     options: ["Being heard without judgment", "Getting advice", "Reflective questions", "Reminders or motivation", "Reframing my thoughts"],
     optionDetails: {
       "Being heard without judgment": "The user benefits from empathetic listening without criticism.",
@@ -99,10 +85,8 @@ This is the question: What kind of support helps you the most?
     }
   },
   {
-    question: `<question>
-This is the question: How do you prefer the AI therapist to interact with you?
-</question>`,
-    type: "multi",
+    question: "How do you prefer the AI therapist to interact with you?",
+    type: "multi", // Note: The UI rewrite below assumes single choice for simplicity, adapt if multi-choice is needed.
     options: ["Warm and empathetic", "Direct and honest", "Calm and steady", "Encouraging and uplifting", "Structured and goal-oriented", "Friendly and casual"],
     optionDetails: {
       "Warm and empathetic": "The user prefers a caring and compassionate interaction style.",
@@ -114,10 +98,8 @@ This is the question: How do you prefer the AI therapist to interact with you?
     }
   },
   {
-    question: `<question>
-This is the question: What kind of responses help you feel most supported?
-</question>`,
-    type: "multi",
+    question: "What kind of responses help you feel most supported?",
+    type: "multi", // Note: The UI rewrite below assumes single choice for simplicity, adapt if multi-choice is needed.
     options: ["Straightforward advice", "Thoughtful reflections", "Emotional validation", "Clear action steps", "Open-ended questions"],
     optionDetails: {
       "Straightforward advice": "The user values clear and concise recommendations.",
@@ -128,10 +110,8 @@ This is the question: What kind of responses help you feel most supported?
     }
   },
   {
-    question: `<question>
-This is the question: What tone do you feel most comfortable with?
-</question>`,
-    type: "multi",
+    question: "What tone do you feel most comfortable with?",
+    type: "multi", // Note: The UI rewrite below assumes single choice for simplicity, adapt if multi-choice is needed.
     options: ["Gentle and supportive", "Neutral and professional", "Light and friendly", "Motivational and assertive"],
     optionDetails: {
       "Gentle and supportive": "The user prefers a soft and caring tone.",

@@ -134,11 +134,7 @@ function Sidebar({ activeConversationId, setActiveConversationId, isSidebarColla
                 <AddIcon />
               </IconButton>
            </Tooltip>
-           <Tooltip title="Close Sidebar">
-             <IconButton onClick={() => setIsSidebarCollapsed(true)}>
-               <CloseIcon />
-             </IconButton>
-           </Tooltip>
+           {/* Removed Close Sidebar button - backdrop click handles this now */}
         </Box>
       </Box>
       <Divider />
@@ -203,14 +199,20 @@ function Sidebar({ activeConversationId, setActiveConversationId, isSidebarColla
   );
 
   return (
-     // Using a persistent Drawer
+     // Using a temporary Drawer for overlay behavior
      <Drawer
-      variant="persistent"
+      variant="temporary" // Changed from persistent
       anchor="left"
       open={!isSidebarCollapsed}
+      onClose={() => setIsSidebarCollapsed(true)} // Add onClose to handle backdrop clicks
+      ModalProps={{
+        keepMounted: true, // Better open performance on mobile.
+      }}
       sx={{
         width: SIDEBAR_WIDTH,
         flexShrink: 0,
+        // Ensure Drawer is above other fixed elements like Header, Input, Footer
+        zIndex: (theme) => theme.zIndex.drawer + 3,
         '& .MuiDrawer-paper': {
           width: SIDEBAR_WIDTH,
           boxSizing: 'border-box',

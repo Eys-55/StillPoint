@@ -21,7 +21,7 @@ const HEADER_HEIGHT = '64px'; // Adjust based on your Header's actual height
 const FOOTER_HEIGHT = '56px'; // Adjust based on your Footer's actual height
 const INPUT_AREA_MIN_HEIGHT = '70px';
 const INPUT_AREA_MAX_HEIGHT = '200px';
-const SIDEBAR_WIDTH = '300px';
+// SIDEBAR_WIDTH constant is defined in sidebar.jsx, not needed here for layout calculations
 
 function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversationId, isSidebarCollapsed, setIsSidebarCollapsed }) {
   const [messages, setMessages] = useState([]);
@@ -182,16 +182,8 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
   }, [activeConversationId, conversationDocRef, model]); // Dependencies: conversation ID and the model itself
 
 
-  // Save chat function
-  const saveChat = async (newMessages) => {
-    if (!conversationDocRef) return;
-    try {
-        const messagesToSave = newMessages.map(({ temp, ...rest }) => rest); // Remove temp flag before saving
-        await updateDoc(conversationDocRef, { messages: messagesToSave, updatedAt: serverTimestamp() });
-    } catch (error) {
-        console.error("Error saving chat:", error);
-    }
-  };
+  // Save chat function (no longer passed to hooks, used internally by hooks)
+  // const saveChat = async (newMessages) => { ... } // Defined within chat_hooks now
 
   // Helper to get summaries (used in useEffect above)
   const getAllSummaries = async () => {
@@ -220,7 +212,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
   const { handleSubmit, handleVoiceButton, handleEndConversation, handleSummarizeHeader, handleEndConversationProfile } = useChatHandlers({
     messages, setMessages, input, setInput, activeConversationId, setActiveConversationId,
     chatSession, model, setLoading, prompts, navigate, isRecording, setIsRecording,
-    setRecordingTime, bundledSummaries, userProfile // Removed saveChat prop
+    setRecordingTime, bundledSummaries, userProfile
   });
 
   // Handler for the summarize button in the header
@@ -229,10 +221,6 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
     setLastSavedTime(new Date());
     setLastMessageCountAtSave(messages.length);
   };
-
-  // Calculate sidebar and main content margin
-  const sidebarWidth = isSidebarCollapsed ? 0 : SIDEBAR_WIDTH;
-  const mainContentMarginLeft = isSidebarCollapsed ? 0 : SIDEBAR_WIDTH;
 
   // --- JSX Rendering ---
   return (
@@ -248,13 +236,10 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
         sx={{
            position: 'fixed',
            top: 0,
-           width: `calc(100% - ${sidebarWidth})`,
-           left: sidebarWidth,
-           zIndex: (theme) => theme.zIndex.drawer + 1,
-           transition: theme.transitions.create(['width', 'left'], { // Smooth transition for header too
-             easing: theme.transitions.easing.sharp,
-             duration: theme.transitions.duration.leavingScreen,
-           }),
+           width: '100%', // Always full width
+           left: 0, // Always align left
+           zIndex: (theme) => theme.zIndex.drawer + 1, // Ensure header is above drawer backdrop but might be below drawer content
+           // Removed transition related to sidebar
          }}
       />
 
@@ -262,8 +247,9 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
         activeConversationId={activeConversationId}
         setActiveConversationId={setActiveConversationId}
         isSidebarCollapsed={isSidebarCollapsed}
-        setIsSidebarCollapsed={setIsSidebarCollapsed}
+        setIsSidebarCollapsed={setIsSidebarCollapsed} // Passed to handle onClose
         darkMode={darkMode}
+        // Sidebar itself is temporary and handles its own state via isSidebarCollapsed prop
       />
 
       {/* Main Chat Area */}
@@ -274,15 +260,11 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          marginLeft: mainContentMarginLeft,
-          transition: theme.transitions.create('margin', {
-             easing: theme.transitions.easing.sharp,
-             duration: theme.transitions.duration.leavingScreen,
-          }),
+          // marginLeft: mainContentMarginLeft, // REMOVED - No margin shift
+          // transition: theme.transitions.create('margin', { ... }), // REMOVED - No transition needed
           paddingTop: HEADER_HEIGHT,
-          // Adjust paddingBottom dynamically based on whether footer is shown? No, Footer is fixed below.
-          // We need space for the fixed Input Area + Footer
-          paddingBottom: `calc(${INPUT_AREA_MIN_HEIGHT} + ${FOOTER_HEIGHT} + 16px)`, // Add some buffer (16px
+          // Padding bottom accounts for fixed Input Area + Footer
+          paddingBottom: `calc(${INPUT_AREA_MIN_HEIGHT} + ${FOOTER_HEIGHT} + 16px)`, // Added buffer
         }}
       >
          {/* Message Display Area */}
@@ -342,15 +324,11 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
          sx={{
            position: 'fixed',
            bottom: FOOTER_HEIGHT,
-           left: mainContentMarginLeft,
-           right: 0,
+           left: 0, // Always align left
+           right: 0, // Spans full width
            p: 1, // Reduced padding slightly
-           zIndex: (theme) => theme.zIndex.drawer + 1,
-           transition: theme.transitions.create('left', {
-             easing: theme.transitions.easing.sharp,
-             duration: theme.transitions.duration.leavingScreen,
-           }),
-           // Heights managed by TextField's multiline/maxRows
+           zIndex: (theme) => theme.zIndex.drawer + 1, // Above backdrop, might be below drawer content
+           // transition: theme.transitions.create('left', { ... }), // REMOVED - No transition needed
            bgcolor: 'background.paper',
            display: 'flex', // Use flex to align items
            alignItems: 'flex-start', // Align items to the top for multiline
@@ -406,13 +384,10 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
         sx={{
             position: 'fixed',
             bottom: 0,
-            width: `calc(100% - ${mainContentMarginLeft})`,
-            left: mainContentMarginLeft,
-            zIndex: (theme) => theme.zIndex.drawer + 2,
-            transition: theme.transitions.create(['width', 'left'], {
-                 easing: theme.transitions.easing.sharp,
-                 duration: theme.transitions.duration.leavingScreen,
-            }),
+            width: '100%', // Always full width
+            left: 0, // Always align left
+            zIndex: (theme) => theme.zIndex.drawer + 2, // Ensure footer is above input area
+            // transition: theme.transitions.create(['width', 'left'], { ... }), // REMOVED - No transition needed
         }}
         darkMode={darkMode}
         setDarkMode={setDarkMode}

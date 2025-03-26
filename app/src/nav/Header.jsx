@@ -61,6 +61,10 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
             </button>
           </div>
         )}
+        {/* Add an empty div on the right for balance when in home/profile/settings mode */}
+        {(mode === 'home' || mode === 'profile' || mode === 'settings') && (
+            <div></div> // This balances the empty div on the left
+        )}
       </div>
     </nav>
   );

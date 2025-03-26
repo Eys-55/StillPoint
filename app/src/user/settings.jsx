@@ -20,6 +20,7 @@ import {
   Switch,
   FormControlLabel
 } from '@mui/material';
+import Header from '../nav/header.jsx';
 // Import icons if available, e.g.,
 // import AccountCircle from '@mui/icons-material/AccountCircle';
 // import Palette from '@mui/icons-material/Palette';
@@ -112,10 +113,13 @@ function Settings({ darkMode, setDarkMode }) {
   }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-        Settings
-      </Typography>
+    // Use a Box to allow the Header to be outside the main Container margins if needed
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Header mode="settings" darkMode={darkMode} />
+      <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
+        <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+          Settings
+        </Typography>
 
       {message && <Alert severity={messageType} sx={{ mb: 3 }} onClose={() => setMessage('')}>{message}</Alert>}
 
@@ -184,7 +188,8 @@ function Settings({ darkMode, setDarkMode }) {
         </List>
       </Paper>
 
-    </Container>
+      </Container>
+    </Box> // Close the main Box
   );
 }
 

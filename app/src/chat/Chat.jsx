@@ -9,12 +9,11 @@ import Sidebar from './sidebar.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useChatHandlers } from './chat_hooks.jsx';
 import { questions } from '../meta/questions.js';
-import { Box, TextField, IconButton, Paper, Stack, Typography, CircularProgress, Avatar, useTheme } from '@mui/material';
+import { Box, TextField, IconButton, Paper, Stack, Typography, CircularProgress, useTheme } from '@mui/material';
 import MicIcon from '@mui/icons-material/Mic';
 import StopIcon from '@mui/icons-material/Stop'; // Changed from CheckIcon
 import SendIcon from '@mui/icons-material/Send';
-import PersonIcon from '@mui/icons-material/Person';
-import SmartToyIcon from '@mui/icons-material/SmartToy'; // Bot icon
+// Removed PersonIcon and SmartToyIcon imports as they are no longer used
 
 // Constants for layout
 const HEADER_HEIGHT = '64px'; // Adjust based on your Header's actual height
@@ -283,11 +282,11 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
                 <Stack
                   key={index} // Consider more stable keys if messages can be inserted/deleted mid-list
                   direction="row"
-                  spacing={1}
+                  spacing={1} // Keep spacing for now, might adjust later
                   alignItems="flex-start"
                   justifyContent={msg.role === 'user' ? 'flex-end' : 'flex-start'}
                 >
-                  {msg.role === 'bot' && <Avatar sx={{ bgcolor: theme.palette.secondary.main, width: 32, height: 32 }}><SmartToyIcon fontSize="small" /></Avatar>}
+                  {/* Removed bot Avatar */}
                   <Paper
                     elevation={1}
                     sx={{
@@ -295,7 +294,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
                       borderRadius: msg.role === 'user' ? '20px 20px 5px 20px' : '20px 20px 20px 5px',
                       bgcolor: msg.role === 'user' ? 'primary.main' : 'background.paper',
                       color: msg.role === 'user' ? 'primary.contrastText' : 'text.primary',
-                      maxWidth: '75%',
+                      maxWidth: '85%', // Allow slightly wider messages now
                       wordWrap: 'break-word',
                       opacity: msg.temp ? 0.7 : 1,
                     }}
@@ -305,7 +304,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
                        {msg.text || (msg.role === 'bot' && "...")}
                      </Typography>
                   </Paper>
-                  {msg.role === 'user' && <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 32, height: 32 }}><PersonIcon fontSize="small" /></Avatar>}
+                  {/* Removed user Avatar */}
                 </Stack>
               ))}
               <div ref={messagesEndRef} /> {/* Scroll target */}

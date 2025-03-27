@@ -3,8 +3,8 @@ import { app, auth, firestore } from '../firebase.jsx';
 import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
 import prompts from '../meta/prompts.js';
 import { doc, getDoc, setDoc, updateDoc, collection, query, getDocs, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
-import Footer from '../nav/footer.jsx';
-import Header from '../nav/header.jsx';
+import Footer, { FOOTER_HEIGHT } from '../nav/footer.jsx'; // Import FOOTER_HEIGHT
+import Header, { HEADER_HEIGHT } from '../nav/header.jsx'; // Import HEADER_HEIGHT
 import Sidebar from './sidebar.jsx';
 import { useNavigate } from 'react-router-dom';
 import { useChatHandlers } from './chat_hooks.jsx';
@@ -16,8 +16,8 @@ import SendIcon from '@mui/icons-material/Send';
 // Removed PersonIcon and SmartToyIcon imports as they are no longer used
 
 // Constants for layout
-const HEADER_HEIGHT = '64px'; // Adjust based on your Header's actual height
-const FOOTER_HEIGHT = '56px'; // Adjust based on your Footer's actual height
+// HEADER_HEIGHT is now imported from Header.jsx
+// FOOTER_HEIGHT is now imported from Footer.jsx
 const INPUT_AREA_MIN_HEIGHT = '70px';
 const INPUT_AREA_MAX_HEIGHT = '200px';
 // SIDEBAR_WIDTH constant is defined in sidebar.jsx, not needed here for layout calculations
@@ -261,9 +261,12 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
           flexDirection: 'column',
           // marginLeft: mainContentMarginLeft, // REMOVED - No margin shift
           // transition: theme.transitions.create('margin', { ... }), // REMOVED - No transition needed
-          paddingTop: HEADER_HEIGHT,
-          // Padding bottom accounts for fixed Input Area + Footer
-          paddingBottom: `calc(${INPUT_AREA_MIN_HEIGHT} + ${FOOTER_HEIGHT} + 16px)`, // Added buffer
+          // --- Padding to prevent overlap with fixed Header, Input Area, and Footer ---
+          paddingTop: `${HEADER_HEIGHT}px`, // Ensures content starts below the fixed Header.
+          // Padding bottom accounts for the combined height of the fixed Input Area (min height) and the fixed Footer, plus a buffer.
+          // This ensures scrollable content does not get hidden underneath these fixed bottom elements.
+          paddingBottom: `calc(${INPUT_AREA_MIN_HEIGHT} + ${FOOTER_HEIGHT}px + 16px)`,
+          // --- End Padding ---
         }}
       >
          {/* Message Display Area */}
@@ -322,7 +325,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
          elevation={3}
          sx={{
            position: 'fixed',
-           bottom: FOOTER_HEIGHT,
+           bottom: `${FOOTER_HEIGHT}px`, // Use imported constant
            left: 0, // Always align left
            right: 0, // Spans full width
            p: 1, // Reduced padding slightly

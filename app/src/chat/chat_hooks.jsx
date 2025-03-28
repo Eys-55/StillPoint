@@ -11,7 +11,8 @@ export const useChatHandlers = ({
   setActiveConversationId,
   chatSession,
   model,
-  setLoading,
+  setLoading, // Keep for message sending
+  setIsSummarizing, // Add setter for summarization state
   prompts,
   navigate,
   isRecording,
@@ -130,7 +131,8 @@ export const useChatHandlers = ({
           }
 
           // Final update for the bot message (remove temp flag)
-          finalBotMessage = { role: 'bot', text: botText };
+          // Trim whitespace from the final bot text
+          finalBotMessage = { role: 'bot', text: botText.trim() };
           setMessages(prev => {
               const msgs = [...prev];
               if (msgs.length > 0) {
@@ -275,8 +277,8 @@ export const useChatHandlers = ({
     if (isRecording && recognitionRef.current) {
        recognitionRef.current.stop();
     }
-    if (!messages || messages.length === 0) return;
-    setLoading(true);
+    if (!messages || messages.length === 0) return null; // Return null if no messages
+    setIsSummarizing(true); // Use summarization loading state
     try {
       const conversationText = messages.map(msg => `${msg.role}: ${msg.text}`).join('\n');
       const combinedPrompt = prompts.summarizer + "\n\nConversation:\n" + conversationText;
@@ -297,9 +299,9 @@ export const useChatHandlers = ({
       console.error("Error during summarization: " + err.message);
       return null;
     } finally {
-      setLoading(false);
+      setIsSummarizing(false); // Turn off summarization loading state
     }
-  }, [messages, activeConversationId, setLoading, prompts, model]);
+  }, [messages, activeConversationId, setIsSummarizing, prompts, model, isRecording]); // Added setIsSummarizing and isRecording dependencies
 
   const handleSummarizeHeader = useCallback(async () => {
     await handleEndConversation();

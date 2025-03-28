@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, IconButton, Typography, Button, Tooltip, Box } from '@mui/material';
+import { AppBar, Toolbar, IconButton, Typography, Tooltip, Box, Badge } from '@mui/material'; // Import Badge
 import MenuIcon from '@mui/icons-material/Menu';
-import SaveAltIcon from '@mui/icons-material/SaveAlt'; // Changed icon
+import CheckIcon from '@mui/icons-material/Check';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useTheme } from '@mui/material/styles';
 
@@ -12,36 +12,49 @@ export const HEADER_HEIGHT = 64; // Default MUI AppBar height
 // IMPORTANT: This Header uses `position: "fixed"`.
 // Consuming components/layouts MUST apply `paddingTop: HEADER_HEIGHT` (or appropriate value)
 // to their main scrollable content area to prevent content from being hidden underneath the header.
-function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversationTitle, lastSavedTime, hasNewMessages, hasMessages }) {
+// THIS HEADER IS NOW INTENDED PRIMARILY FOR THE CHAT VIEW.
+function Header({ mode = 'chat', onToggleSidebar, onSummarize, onBack, darkMode, conversationTitle, lastSavedTime, hasNewMessages, hasMessages }) {
   const navigate = useNavigate();
   const theme = useTheme();
 
   const handleBackClick = () => {
-    if (mode === 'summaries') {
+    if (mode === 'summaries') { // Keep summaries back logic if needed
       navigate('/profile');
     } else if (onBack) {
-      onBack();
+      onBack(); // Use the provided onBack function if available
+    } else {
+      navigate(-1); // Default back navigation if no specific handler
     }
   };
 
   const formattedTime = lastSavedTime
     ? new Date(lastSavedTime).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) // Shorter time format
-    : "Not saved";
+    : "never"; // Changed from "Not saved"
 
-  let title = "Chat"; // Default title for chat mode
-  if (mode === 'home') title = "Home";
-  else if (mode === 'profile') title = "Profile";
-  else if (mode === 'settings') title = "Settings";
-  else if (mode === 'summaries') title = "Conversation Summary";
-  // Allow conversationTitle prop to override the default 'Chat' title if provided
-  if (mode === 'chat' && conversationTitle && conversationTitle !== "New Conversation") {
-      title = conversationTitle;
+  // Determine tooltip text based on state
+  let tooltipTitle = "No messages yet";
+  if (hasMessages) {
+    if (hasNewMessages) {
+      tooltipTitle = `Unsaved changes (last save: ${formattedTime}). Click to save.`;
+    } else if (lastSavedTime) {
+      tooltipTitle = `Conversation saved (${formattedTime})`;
+    } else {
+      tooltipTitle = "Click to save conversation";
+    }
+  }
+
+  // Simplify title logic - primarily for chat
+  let title = "Chat";
+  if (mode === 'summaries') {
+    title = "Conversation Summary";
+  } else if (conversationTitle && conversationTitle !== "New Conversation") {
+     title = conversationTitle; // Use conversation title if available in chat mode
   }
 
 
-  // Determine button visibility/state
+  // Determine button visibility/state - primarily for chat
   const showSidebarButton = mode === 'chat';
-  const showBackButton = mode === 'summaries' || onBack;
+  const showBackButton = mode === 'summaries' || !!onBack; // Show if mode is summaries OR if onBack prop is provided
   const showSummarizeSection = mode === 'chat';
 
   return (
@@ -83,22 +96,30 @@ function Header({ mode, onToggleSidebar, onSummarize, onBack, darkMode, conversa
         <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
           {showSummarizeSection && (
             <>
-              <Tooltip title={hasMessages ? (lastSavedTime ? (hasNewMessages ? `New messages since ${formattedTime}` : `Last saved: ${formattedTime}`) : "Conversation not saved") : "No messages yet"}>
-                {/* Wrap the span in a div for Tooltip when button is disabled */}
-                 <div style={{ display: 'inline-block', cursor: !hasMessages ? 'not-allowed' : 'default' }}>
-                   <Button
-                      color="inherit"
-                      onClick={hasMessages ? onSummarize : undefined}
-                      disabled={!hasMessages}
-                      startIcon={<SaveAltIcon />}
-                      size="small" // Smaller button
-                      sx={{ textTransform: 'none', mr: 1 }} // Prevent uppercase, add margin
-                    >
-                       <Typography variant="caption" display={{ xs: 'none', sm: 'inline' }}> {/* Hide text on extra small screens */}
-                         {hasMessages ? (lastSavedTime ? (hasNewMessages ? `Save` : `Saved`) : "Save") : 'Save'}
-                       </Typography>
-                   </Button>
-                </div>
+              <Tooltip title={tooltipTitle}>
+                {/* Wrap IconButton in span for Tooltip when disabled */}
+                <span style={{ cursor: !hasMessages ? 'not-allowed' : 'pointer' }}>
+                  <IconButton
+                    color="inherit"
+                    onClick={hasMessages ? onSummarize : undefined}
+                    disabled={!hasMessages}
+                    size="medium" // Standard IconButton size
+                    sx={{
+                      mr: 1, // Add some margin if needed
+                      // Change color based on save state for visual feedback
+                      color: hasMessages ? (hasNewMessages ? 'warning.main' : 'success.main') : 'action.disabled'
+                    }}
+                  >
+                    {/* Add Badge if there are new messages */}
+                    {hasNewMessages ? (
+                       <Badge color="warning" variant="dot">
+                         <CheckIcon />
+                       </Badge>
+                    ) : (
+                       <CheckIcon />
+                    )}
+                  </IconButton>
+                </span>
               </Tooltip>
             </>
           )}

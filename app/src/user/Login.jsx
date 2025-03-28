@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
 import { auth } from '../firebase.jsx';
 import {
-  signInWithPopup,
-  GoogleAuthProvider,
-  FacebookAuthProvider,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  sendEmailVerification // Import sendEmailVerification
 } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
-import { Container, Card, CardContent, Button, Typography, Box, CssBaseline, Alert, Stack, Divider, TextField, CircularProgress } from '@mui/material';
+import { Container, Card, CardContent, Button, Typography, Box, CssBaseline, Alert, Stack, Divider, TextField, CircularProgress, Link } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import GoogleIcon from '@mui/icons-material/Google';
-import FacebookIcon from '@mui/icons-material/Facebook';
-import EmailIcon from '@mui/icons-material/Email';
+// Removed GoogleIcon and FacebookIcon imports
 
 // Define a theme, you might want to sync this with your app's main theme
 const theme = createTheme({
@@ -30,11 +26,47 @@ const theme = createTheme({
     button: {
       textTransform: 'none', // Keep button text case as defined
     }
+  },
+  shape: {
+    borderRadius: 16, // Default border radius for components like Button, Card, TextField
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 50, // More rounded buttons
+        },
+      },
+    },
+    MuiTextField: {
+        styleOverrides: {
+            root: {
+                '& .MuiOutlinedInput-root': {
+                    borderRadius: 50, // More rounded text fields
+                },
+            },
+        },
+    },
+    MuiCard: {
+        styleOverrides: {
+            root: {
+                borderRadius: 20, // More rounded cards
+            }
+        }
+    },
+    MuiAlert: {
+        styleOverrides: {
+            root: {
+                borderRadius: 12, // Slightly rounded alerts
+            }
+        }
+    }
   }
 });
 
 function Login() {
   const [error, setError] = useState('');
+  const [info, setInfo] = useState(''); // For success/info messages
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,57 +76,50 @@ function Login() {
     console.error("Authentication error:", err);
     console.error("Error Code:", err.code);
     console.error("Error Message:", err.message);
+    setInfo(''); // Clear info messages on error
 
-    let message = "Failed to authenticate. Please check the console for details.";
+    let message = "An unexpected error occurred. Please try again.";
     // More specific error messages
-    if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
-      message = "Login cancelled. Please try again.";
-    } else if (err.code === 'auth/account-exists-with-different-credential') {
-      message = "An account already exists with this email using a different sign-in method. Try signing in with the original method.";
-    } else if (err.code === 'auth/auth-domain-config-error') {
-       message = "Authentication domain configuration error. Check Firebase settings.";
-    } else if (err.code === 'auth/operation-not-allowed') {
-       message = "This sign-in method isn't enabled. Check Firebase settings.";
-    } else if (err.code === 'auth/invalid-email') {
+    if (err.code === 'auth/invalid-email') {
       message = "Invalid email address format.";
     } else if (err.code === 'auth/user-disabled') {
       message = "This user account has been disabled.";
     } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
       message = "Invalid email or password.";
     } else if (err.code === 'auth/email-already-in-use') {
-      message = "An account already exists with this email address.";
+      message = "An account already exists with this email address. Try signing in.";
     } else if (err.code === 'auth/weak-password') {
       message = "Password is too weak. It should be at least 6 characters.";
+    } else if (err.code === 'auth/too-many-requests') {
+        message = "Too many attempts. Please try again later.";
+    } else if (err.code === 'auth/network-request-failed') {
+        message = "Network error. Please check your connection and try again.";
     }
     setError(message);
   }
 
-  const handleSocialLogin = async (provider) => {
-    setError('');
-    setLoading(true);
-    console.log("Attempting social login with provider:", provider.providerId);
-    try {
-      console.log("Calling signInWithPopup...");
-      const result = await signInWithPopup(auth, provider);
-      console.log("signInWithPopup successful:", result);
-      console.log("User:", result.user);
-      navigate('/');
-    } catch (err) {
-      handleAuthError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleEmailLogin = async (e) => {
     e.preventDefault(); // Prevent form submission
     setError('');
+    setInfo('');
     setLoading(true);
     console.log("Attempting email login...");
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log("Email login successful:", userCredential.user);
-      navigate('/');
+      console.log("Email login attempt successful:", userCredential.user);
+
+      if (!userCredential.user.emailVerified) {
+        setError("Please verify your email address before logging in. Check your inbox for the verification link.");
+        // Optionally offer to resend verification
+        // await sendEmailVerification(userCredential.user); // Resend verification
+        // setInfo("Verification email resent. Please check your inbox.");
+        setLoading(false);
+        return; // Stop login process
+      }
+
+      console.log("Email verified, navigating home.");
+      navigate('/'); // Navigate only if email is verified
+
     } catch (err) {
       handleAuthError(err);
     } finally {
@@ -105,13 +130,22 @@ function Login() {
    const handleEmailSignUp = async (e) => {
     e.preventDefault(); // Prevent form submission
     setError('');
+    setInfo('');
     setLoading(true);
     console.log("Attempting email sign up...");
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       console.log("Email sign up successful:", userCredential.user);
-      // Optional: Redirect to a 'complete profile' page or home
-      navigate('/');
+
+      // Send verification email
+      await sendEmailVerification(userCredential.user);
+      console.log("Verification email sent to:", userCredential.user.email);
+
+      setInfo("Account created successfully! Please check your email inbox for a verification link to activate your account.");
+      setEmail(''); // Clear fields after successful signup
+      setPassword('');
+      // Do not navigate immediately, user needs to verify first.
+
     } catch (err) {
        handleAuthError(err);
     } finally {
@@ -119,18 +153,7 @@ function Login() {
     }
   };
 
-
-  const handleGoogleLogin = () => {
-    console.log("handleGoogleLogin called");
-    const provider = new GoogleAuthProvider();
-    handleSocialLogin(provider);
-  };
-
-  const handleFacebookLogin = () => {
-    console.log("handleFacebookLogin called");
-    const provider = new FacebookAuthProvider();
-    handleSocialLogin(provider);
-  };
+  // Removed handleSocialLogin, handleGoogleLogin, handleFacebookLogin
 
   return (
     <ThemeProvider theme={theme}>
@@ -149,10 +172,17 @@ function Login() {
       >
         <Card sx={{
           width: '100%',
-          borderRadius: 2,
+          // borderRadius: 4, // Applied via theme
           boxShadow: 3,
+          position: 'relative', // Needed for loading overlay positioning
+          overflow: 'hidden' // Hide overflow from loading indicator
         }}>
-          <CardContent sx={{ p: 4 }}>
+          {loading && ( // Central loading indicator overlay
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', zIndex: 10, borderRadius: 'inherit' }}>
+              <CircularProgress color="primary"/>
+            </Box>
+           )}
+          <CardContent sx={{ p: 4, filter: loading ? 'blur(2px)' : 'none' /* Optional: blur background when loading */ }}>
             <Typography component="h1" variant="h4" align="center" gutterBottom sx={{ fontWeight: 'bold' }}>
               Welcome
             </Typography>
@@ -161,16 +191,15 @@ function Login() {
             </Typography>
 
             {error && (
-              <Alert severity="error" sx={{ mb: 3, width: '100%' }}>
+              <Alert severity="error" sx={{ mb: 3, width: '100%' /* borderRadius applied via theme */ }}>
                 {error}
               </Alert>
             )}
-
-             {loading && ( // Central loading indicator overlay
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', zIndex: 10, borderRadius: 'inherit' }}>
-                  <CircularProgress />
-                </Box>
-              )}
+            {info && (
+              <Alert severity="success" sx={{ mb: 3, width: '100%' /* borderRadius applied via theme */ }}>
+                {info}
+              </Alert>
+            )}
 
             {/* Email/Password Form */}
             <Box component="form" noValidate sx={{ mt: 1 }}>
@@ -186,6 +215,7 @@ function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
+                // borderRadius applied via theme
               />
               <TextField
                 margin="normal"
@@ -199,54 +229,39 @@ function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
+                 // borderRadius applied via theme
               />
               <Stack direction="row" spacing={2} sx={{ mt: 3, mb: 2 }}>
-                 <Button
-                  type="submit" // Changed from button type
-                  fullWidth
-                  variant="contained"
-                  onClick={handleEmailLogin} // Attach handler
-                  disabled={loading || !email || !password}
-                >
+                  <Button
+                   type="submit" // Changed from button type
+                   fullWidth
+                   variant="contained"
+                   onClick={handleEmailLogin} // Attach handler
+                   disabled={loading || !email || !password}
+                   sx={{ py: 1.5 /* borderRadius applied via theme */ }}
+                  >
                   Sign In
-                </Button>
-                 <Button
-                  type="button" // Keep as button type
-                  fullWidth
-                  variant="outlined"
-                  onClick={handleEmailSignUp} // Attach handler
-                  disabled={loading || !email || !password}
-                >
+                 </Button>
+                  <Button
+                   type="button" // Keep as button type
+                   fullWidth
+                   variant="outlined"
+                   onClick={handleEmailSignUp} // Attach handler
+                   disabled={loading || !email || !password}
+                   sx={{ py: 1.5 /* borderRadius applied via theme */ }}
+                 >
                   Sign Up
-                </Button>
+                 </Button>
               </Stack>
+               {/* Optional: Add a "Forgot Password?" link here */}
+               {/* <Box textAlign="center" sx={{ mt: 1 }}>
+                 <Link href="#" variant="body2">
+                   Forgot password?
+                 </Link>
+               </Box> */}
             </Box>
 
-            <Divider sx={{ my: 3 }}>Or continue with</Divider>
-
-            {/* Social Logins */}
-            <Stack spacing={2} sx={{ width: '100%' }}>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<GoogleIcon />}
-                onClick={handleGoogleLogin}
-                disabled={loading}
-                sx={{ py: 1.5 }}
-              >
-                Google
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<FacebookIcon />}
-                onClick={handleFacebookLogin}
-                disabled={loading}
-                sx={{ py: 1.5, color: '#1877F2', borderColor: '#1877F2', '&:disabled': { color: 'grey', borderColor: 'grey' } }}
-              >
-                Facebook
-              </Button>
-            </Stack>
+            {/* Removed Divider and Social Logins */}
 
           </CardContent>
         </Card>

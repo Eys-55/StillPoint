@@ -20,7 +20,9 @@ import {
   Switch,
   FormControlLabel
 } from '@mui/material';
-import Header from '../nav/header.jsx';
+// import Header from '../nav/header.jsx'; // Removed Header import
+import { HEADER_HEIGHT } from '../nav/header.jsx'; // Import for padding calculation if needed, or set a static value
+import { FOOTER_HEIGHT } from '../nav/footer.jsx'; // Import Footer height
 // Import icons if available, e.g.,
 // import AccountCircle from '@mui/icons-material/AccountCircle';
 // import Palette from '@mui/icons-material/Palette';
@@ -88,7 +90,7 @@ function Settings({ darkMode, setDarkMode }) {
 
   if (loading) {
     return (
-      <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 64px)', /* Adjust height if header exists */ }}>
+      <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', /* Adjust height */ }}>
         <CircularProgress />
       </Container>
     );
@@ -106,25 +108,47 @@ function Settings({ darkMode, setDarkMode }) {
   if (!user) {
     // This case might not be reached often due to ProtectedRoute, but good practice.
     return (
-      <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - 64px)', textAlign: 'center' }}>
+      <Container sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', textAlign: 'center' }}>
         <Typography variant="h6">Please log in to access settings.</Typography>
       </Container>
     );
   }
 
+  const paperStyle = {
+    mb: 3,
+    p: 3,
+    borderRadius: 4, // Rounded corners for Paper components
+    boxShadow: 2 // Consistent elevation/shadow
+  };
+
+  const textFieldStyle = {
+    mb: 2,
+    '& .MuiOutlinedInput-root': {
+      borderRadius: 50, // Make TextField rounded
+    },
+  };
+
+  const buttonStyle = {
+    borderRadius: 50, // Make button rounded
+    py: 1.2, // Adjust padding for better look
+    px: 3
+  };
+
+
   return (
     // Use a Box to allow the Header to be outside the main Container margins if needed
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
-      <Header mode="settings" darkMode={darkMode} />
-      <Container component="main" maxWidth="md" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
-        <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default', pt: 4 /* Add padding top */ }}>
+      {/* <Header mode="settings" darkMode={darkMode} /> */} {/* Removed Header */}
+      {/* Add bottom margin (mb) to account for fixed Footer height + buffer */}
+      <Container component="main" maxWidth="md" sx={{ /* mt: 4, removed */ mb: `${FOOTER_HEIGHT + 16}px`, flexGrow: 1 }}>
+        <Typography variant="h4" gutterBottom sx={{ mb: 3, fontWeight: 'medium' }}>
           Settings
         </Typography>
 
-      {message && <Alert severity={messageType} sx={{ mb: 3 }} onClose={() => setMessage('')}>{message}</Alert>}
+      {message && <Alert severity={messageType} sx={{ mb: 3, borderRadius: 2 }} onClose={() => setMessage('')}>{message}</Alert>}
 
       {/* Profile Information Section */}
-      <Paper elevation={2} sx={{ mb: 3, p: 3 }}>
+      <Paper sx={paperStyle}>
         <Typography variant="h6" gutterBottom>Profile Information</Typography>
         <Box component="form" onSubmit={handleSave} sx={{ mt: 2 }}>
           <TextField
@@ -133,36 +157,36 @@ function Settings({ darkMode, setDarkMode }) {
             variant="outlined"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            sx={{ mb: 2 }}
+            sx={textFieldStyle}
             // InputProps={{ startAdornment: <AccountCircle sx={{ mr: 1, color: 'action.active' }} /> }} // Example Icon
           />
-          <Button type="submit" variant="contained" size="large">
+          <Button type="submit" variant="contained" size="large" sx={buttonStyle}>
             Save Changes
           </Button>
         </Box>
       </Paper>
 
       {/* Appearance Section */}
-      <Paper elevation={2} sx={{ mb: 3, p: 3 }}>
+      <Paper sx={paperStyle}>
          <Typography variant="h6" gutterBottom>Appearance</Typography>
          <FormControlLabel
-            control={
-              <Switch
-                checked={darkMode}
-                onChange={() => setDarkMode(prev => !prev)}
-                name="darkModeSwitch"
-                color="primary"
-              />
-            }
-            label={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            sx={{ mt: 1 }}
-          />
+           control={
+             <Switch
+               checked={darkMode}
+               onChange={() => setDarkMode(prev => !prev)}
+               name="darkModeSwitch"
+               color="primary"
+             />
+           }
+           label={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+           sx={{ mt: 1, display: 'flex', alignItems: 'center' }} // Ensure label and switch align well
+         />
            {/* Potential Icon: {darkMode ? <Brightness4Icon /> : <Brightness7Icon />} */}
       </Paper>
 
       {/* Account Management Section */}
-      <Paper elevation={2} sx={{ mb: 3 }}>
-        <Box sx={{ p: 3 }}>
+      <Paper sx={paperStyle}>
+        <Box sx={{ p: 3, pb: 1 }}> {/* Adjust padding for title */}
             <Typography variant="h6" gutterBottom>Account Management</Typography>
         </Box>
         <List disablePadding>
@@ -170,25 +194,26 @@ function Settings({ darkMode, setDarkMode }) {
             {/* <ListItemIcon><PrivacyTip /></ListItemIcon> */}
             <ListItemText primary="Privacy Policy" secondary="Review our data usage policies" />
           </ListItem>
-          <Divider component="li" />
+          <Divider component="li" variant="inset" /> {/* Inset divider */}
           <ListItem button onClick={handleLogout}>
             {/* <ListItemIcon><ExitToApp /></ListItemIcon> */}
             <ListItemText primary="Log Out" secondary="Sign out of your current session" />
           </ListItem>
-          <Divider component="li" />
+          <Divider component="li" variant="inset" /> {/* Inset divider */}
           <ListItem button onClick={handleDeleteAccount} sx={{ color: 'error.main' }}>
-             {/* <ListItemIcon sx={{ color: 'error.main' }}><DeleteForever /></ListItemIcon> */}
-             <ListItemText
-               primary="Delete Account"
-               secondary="Permanently delete your account and all associated data"
-               primaryTypographyProps={{ color: 'error' }}
-               secondaryTypographyProps={{ color: 'error.light' }}
-             />
+              {/* <ListItemIcon sx={{ color: 'error.main' }}><DeleteForever /></ListItemIcon> */}
+              <ListItemText
+                primary="Delete Account"
+                secondary="Permanently delete your account and all associated data"
+                primaryTypographyProps={{ color: 'error' }}
+                secondaryTypographyProps={{ color: 'error.light' }}
+              />
           </ListItem>
         </List>
       </Paper>
 
       </Container>
+      {/* Footer rendered conditionally in App.jsx */}
     </Box> // Close the main Box
   );
 }

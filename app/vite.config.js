@@ -10,5 +10,8 @@ export default defineConfig({
     },
   },
   plugins: [react()],
-  dedupe: ["react", "react-dom"]
+  dedupe: ["react", "react-dom"],
+  server: {
+    host: true
+  }
 });

@@ -5,7 +5,7 @@ import { questions } from '../meta/questions.js';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
-  Card,
+  Card, // No longer used directly, but kept for potential future use
   CardContent,
   Typography,
   Button,
@@ -18,7 +18,10 @@ import {
   FormLabel,
   CircularProgress,
   Fade,
+  Paper,
+  Stack,
 } from '@mui/material';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 
 function Questionnaire() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -32,7 +35,7 @@ function Questionnaire() {
 
   useEffect(() => {
     async function checkQuestionnaire() {
-      setLoading(true); // Start loading
+      setLoading(true);
       const initializeEmptyAnswers = () => questions.map(q => ({ question: q.question, answer: "" }));
 
       if (user) {
@@ -40,225 +43,269 @@ function Questionnaire() {
         try {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists() && docSnap.data().answers) {
-            // CORRECTED LINE: Provide default empty array if answers doesn't exist
-            const storedAnswers = docSnap.data().answers ||[]; // Get stored answers array
-            
-            // Create a map for quick lookup of stored answers by question text
-            const storedAnswersMap = new Map(storedAnswers.map(a => [a.question, a.answer]));
-
-            // Map questions to answers, ensuring order and filling gaps
-            const fullAnswers = questions.map(q => ({
-              question: q.question,
-              answer: storedAnswersMap.get(q.question) || "" // Get stored answer or default to empty string
-            }));
-
-            setAnswers(fullAnswers);
-            setIsEditable(true); // Go directly to edit mode if data exists
+            const storedAnswers = docSnap.data().answers || [];
+            // Ensure storedAnswers is actually an array before mapping
+            if (Array.isArray(storedAnswers)) {
+                const storedAnswersMap = new Map(storedAnswers.map(a => [a.question, a.answer]));
+                const fullAnswers = questions.map(q => ({
+                    question: q.question,
+                    answer: storedAnswersMap.get(q.question) || ""
+                }));
+                setAnswers(fullAnswers);
+            } else {
+                 // Handle case where 'answers' field exists but is not an array
+                 console.warn("Stored 'answers' is not an array:", storedAnswers);
+                 setAnswers(initializeEmptyAnswers());
+            }
+            setIsEditable(true); // Already completed, enter edit mode
           } else {
-             // Initialize answers with empty structure if no document or answers array exists
+            // No document or no 'answers' field, start fresh
             setAnswers(initializeEmptyAnswers());
-            setIsEditable(false); // Start in interactive mode if no previous answers
+            setIsEditable(false);
           }
         } catch (error) {
           console.error("Error fetching questionnaire:", error);
-          // Handle error appropriately, maybe show a message to the user
-          // Initialize with empty structure on error as well
-           setAnswers(initializeEmptyAnswers());
-           setIsEditable(false);
+          setAnswers(initializeEmptyAnswers());
+          setIsEditable(false);
         }
       } else {
-        // Handle case where user is not logged in
-         console.warn("User not logged in, cannot fetch questionnaire.");
-         // Initialize with empty structure
-         setAnswers(initializeEmptyAnswers());
-         setIsEditable(false);
+        console.warn("User not logged in, cannot fetch questionnaire.");
+        setAnswers(initializeEmptyAnswers());
+        setIsEditable(false);
       }
-      setLoading(false); // Finish loading
+      setLoading(false);
     }
     checkQuestionnaire();
-  }, [user]); // Dependency array only includes user
-  // Fade effect for interactive mode transitions
+  }, [user]); // Rerun if user changes
+
+  // Effect for fade transition (only in interactive mode)
   useEffect(() => {
     if (!isEditable && !loading) {
-      setFade(true); // Ensure fade-in happens when component is ready
+      setFade(true); // Ensure fade-in happens when question changes
     }
   }, [currentQuestionIndex, isEditable, loading]);
 
+  // Helper for smooth question transition
   const transitionQuestion = (callback) => {
-    setFade(false);
+    setFade(false); // Fade out current question
     setTimeout(() => {
-      callback();
-      setFade(true);
-    }, 300); // Match timeout with CSS transition duration if needed
+      callback(); // Change the question index
+      setFade(true); // Fade in the new question
+    }, 300); // Match Fade timeout duration
   };
 
-  // Interactive mode: handle answer selection
+  // Handle answer selection in interactive mode
   const handleAnswer = async (option) => {
     const newAnswer = { question: questions[currentQuestionIndex].question, answer: option };
     const updatedAnswers = [...answers];
     updatedAnswers[currentQuestionIndex] = newAnswer;
-    setAnswers(updatedAnswers);
+    setAnswers(updatedAnswers); // Update local state
 
     if (currentQuestionIndex < questions.length - 1) {
+      // Move to the next question with transition
       transitionQuestion(() => {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
       });
     } else {
-      setSaving(true); // Indicate saving process
-      const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
-      try {
-        await setDoc(docRef, { answers: updatedAnswers, completedAt: new Date().toISOString() }, { merge: true }); // Use merge to be safe
-        navigate('/profile');
-      } catch (err) {
-        console.error("Error saving questionnaire:", err);
-        setSaving(false); // Reset saving state on error
-        // Show error message to user
+      // Last question: Save all answers to Firestore
+      setSaving(true);
+      if (user) {
+          const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
+          try {
+            // Ensure only valid answers are saved (basic check)
+            const finalAnswers = updatedAnswers.filter(a => a && typeof a.question === 'string' && typeof a.answer === 'string');
+            await setDoc(docRef, { answers: finalAnswers, completedAt: new Date().toISOString() }, { merge: true });
+            navigate('/profile'); // Navigate to profile page on success
+            // No need to setSaving(false) due to navigation
+          } catch (err) {
+            console.error("Error saving questionnaire:", err);
+            alert("Failed to save responses. Please try again."); // User feedback
+            setSaving(false); // Reset saving state on error
+          }
+      } else {
+          console.error("Cannot save questionnaire: User not logged in.");
+          alert("You must be logged in to save responses.");
+          setSaving(false);
       }
-      // No need to setSaving(false) on success as we navigate away
     }
   };
 
-  // Edit mode: handle selection update
+  // Handle option selection in edit mode (using RadioGroup)
   const handleSelectOption = (qIndex, option) => {
     const updatedAnswers = [...answers];
-    // Ensure an answer object exists, though initialization should prevent this need
-    if (!updatedAnswers[qIndex]) {
+    // Ensure the answer object structure is correct
+    if (!updatedAnswers[qIndex] || typeof updatedAnswers[qIndex] !== 'object') {
       updatedAnswers[qIndex] = { question: questions[qIndex].question, answer: option };
     } else {
       updatedAnswers[qIndex].answer = option;
     }
-    setAnswers(updatedAnswers);
+    setAnswers(updatedAnswers); // Update local state
   };
 
-  // Save updated answers in edit mode
+  // Handle saving changes in edit mode
   const handleSaveEdit = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent default form submission
     setSaving(true);
-    const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
-    try {
-      // Filter out any potentially null entries before saving, though ideally 'answers' state is always full
-      const finalAnswers = answers.filter(a => a !== null && a.answer !== "");
-      await setDoc(docRef, { answers: finalAnswers, completedAt: new Date().toISOString() }, { merge: true });
-      navigate('/profile');
-    } catch (err) {
-      console.error("Error updating questionnaire:", err);
-      setSaving(false);
-      // Show error message to user
+    if (user) {
+        const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
+        try {
+            // Filter out any potentially invalid entries before saving
+            const finalAnswers = answers.filter(a => a && a.question && typeof a.answer === 'string'); // Check answer type too
+            await setDoc(docRef, { answers: finalAnswers, completedAt: new Date().toISOString() }, { merge: true });
+            navigate('/profile'); // Navigate back to profile on success
+            // No need to setSaving(false) due to navigation
+        } catch (err) {
+            console.error("Error updating questionnaire:", err);
+            alert("Failed to save changes. Please try again."); // User feedback
+            setSaving(false); // Reset saving state on error
+        }
+    } else {
+        console.error("Cannot save questionnaire updates: User not logged in.");
+        alert("You must be logged in to save changes.");
+        setSaving(false);
     }
   };
 
+  // ----- Render Logic -----
+
+  // Common Loading Indicator
   if (loading) {
     return (
-      <Container maxWidth="sm" sx={{ mt: 5, textAlign: 'center' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh', flexDirection: 'column', gap: 2 }}>
         <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>Loading questionnaire...</Typography>
-      </Container>
+        <Typography variant="h6" color="text.secondary">Loading questionnaire...</Typography>
+      </Box>
     );
   }
 
-  // Edit Mode UI
+  // --- Edit Mode UI ---
   if (isEditable) {
     return (
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-        <Card>
-          <CardContent>
-            <Typography variant="h5" component="div" gutterBottom>
-              Edit Questionnaire Responses
-            </Typography>
-            <form onSubmit={handleSaveEdit}>
+        <Paper elevation={3} sx={{ borderRadius: 4, p: { xs: 2, sm: 3, md: 4 } }}>
+          <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'medium', mb: 3 }}>
+            Review Your Responses
+          </Typography>
+          <form onSubmit={handleSaveEdit}>
+            <Stack spacing={4}>
               {questions.map((q, idx) => {
-                const currentAnswer = answers[idx] ? answers[idx].answer : "";
+                // Find the corresponding answer object, default to empty string if not found
+                const currentAnswerObj = answers.find(a => a?.question === q.question);
+                const currentAnswer = currentAnswerObj ? currentAnswerObj.answer : "";
+
                 return (
-                  <FormControl component="fieldset" key={idx} sx={{ mb: 3, width: '100%' }}>
-                    <FormLabel component="legend" sx={{ mb: 1 }}>
-                      <Typography variant="subtitle1" fontWeight="bold">
+                  <FormControl component="fieldset" key={idx} fullWidth>
+                    <FormLabel component="legend" sx={{ mb: 1.5 }}>
+                      <Typography variant="h6" fontWeight="regular">
                         {idx + 1}. {q.question}
                       </Typography>
                     </FormLabel>
-                    {/* Assuming single choice based on original interactive mode */}
                     <RadioGroup
                       aria-label={q.question}
                       name={`question-${idx}`}
-                      value={currentAnswer}
-                      onChange={(e) => handleSelectOption(idx, e.target.value)}
+                      value={currentAnswer} // Use the found answer value
+                      onChange={(e) => handleSelectOption(idx, e.target.value)} // Pass index to identify question
                     >
                       {q.options.map((option, optionIdx) => (
                         <FormControlLabel
                           key={optionIdx}
                           value={option}
-                          control={<Radio />}
-                          label={option}
+                          control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 24 } }} />}
+                          label={<Typography variant="body1">{option}</Typography>}
+                          sx={{ mb: 0.5, ml: 1 }}
                         />
                       ))}
                     </RadioGroup>
                   </FormControl>
                 );
               })}
-              <Box sx={{ mt: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                <Button
-                    variant="outlined"
-                    onClick={() => navigate('/profile')}
-                    disabled={saving}
-                    color="secondary"
-                >
-                    Cancel
-                </Button>
-                <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={saving}
-                    startIcon={saving ? <CircularProgress size={20} color="inherit" /> : null}
-                >
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </Box>
-            </form>
-          </CardContent>
-        </Card>
+            </Stack>
+            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+              <Button
+                variant="outlined"
+                onClick={() => navigate('/profile')} // Navigate back to profile on cancel
+                disabled={saving}
+                color="secondary"
+                sx={{ borderRadius: 5, px: 3 }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={saving}
+                startIcon={saving ? <CircularProgress size={20} color="inherit" /> : null}
+                sx={{ borderRadius: 5, px: 3 }}
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </Box>
+          </form>
+        </Paper>
       </Container>
     );
   }
 
-  // Interactive Mode UI
+  // --- Interactive Mode UI ---
   const currentQ = questions[currentQuestionIndex];
-  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+  // Progress based on NEXT question index (0/N, 1/N, ..., N/N)
+  const progress = ((currentQuestionIndex) / questions.length) * 100;
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 5 }}>
-      <Box sx={{ width: '100%', mb: 2 }}>
-        <LinearProgress variant="determinate" value={progress} />
-      </Box>
+    <Container maxWidth="sm" sx={{ mt: { xs: 3, sm: 5 }, mb: 4 }}>
+      {/* Progress Bar */}
+       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+         <Box sx={{ width: '100%', mr: 1 }}>
+           <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 4 }}/>
+         </Box>
+         <Box sx={{ minWidth: 55 }}> {/* Adjusted width */}
+           {/* Show N/Total */}
+           <Typography variant="body2" color="text.secondary">{`${currentQuestionIndex + 1}/${questions.length}`}</Typography>
+         </Box>
+       </Box>
+
+      {/* Question Card */}
       <Fade in={fade} timeout={300}>
-        <Card>
-          <CardContent>
-            <Typography variant="overline" display="block" gutterBottom>
-              Question {currentQuestionIndex + 1} of {questions.length}
-            </Typography>
-            <Typography variant="h6" component="div" sx={{ mb: 3 }}>
+        <Paper elevation={3} sx={{ borderRadius: 4 }}>
+          <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+            <Typography variant="h5" component="div" sx={{ mb: 4, fontWeight: 'medium', textAlign: 'center' }}>
               {currentQ.question}
             </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            <Stack spacing={2}>
               {currentQ.options.map((option, idx) => (
                 <Button
                   key={idx}
                   variant="outlined"
                   fullWidth
                   onClick={() => handleAnswer(option)}
-                  sx={{ justifyContent: 'flex-start', textTransform: 'none', py: 1.5, px: 2 }} // Nicer button layout
+                  sx={{
+                    justifyContent: 'flex-start',
+                    textTransform: 'none',
+                    py: 1.5,
+                    px: 2,
+                    borderRadius: 3,
+                    borderColor: 'grey.400',
+                    '&:hover': {
+                      backgroundColor: 'action.hover'
+                    }
+                   }}
                 >
-                  {option}
+                  <CheckCircleOutlineIcon sx={{ mr: 1.5, color: 'grey.500' }} />
+                  <Typography variant="body1">{option}</Typography>
                 </Button>
               ))}
-            </Box>
+            </Stack>
           </CardContent>
-        </Card>
+        </Paper>
       </Fade>
-       {saving && ( // Show saving indicator at the bottom in interactive mode too
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-            <CircularProgress />
-            <Typography sx={{ ml: 1 }}>Saving...</Typography>
-          </Box>
-        )}
+
+      {/* Saving Indicator (for last question submission) */}
+      {saving && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 1 }}>
+          <CircularProgress size={24} />
+          <Typography color="text.secondary">Saving your responses...</Typography>
+        </Box>
+      )}
     </Container>
   );
 }

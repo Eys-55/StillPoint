@@ -5,51 +5,38 @@ import HomeIcon from '@mui/icons-material/Home';
 import PersonIcon from '@mui/icons-material/Person';
 import ChatIcon from '@mui/icons-material/Chat';
 import SettingsIcon from '@mui/icons-material/Settings';
-import LogoutIcon from '@mui/icons-material/Logout'; // For potential end conversation
-import { auth } from '../firebase.jsx'; // To check auth status if needed
+// Removed LogoutIcon import
 
-// Define Footer height for layout calculations elsewhere
 export const FOOTER_HEIGHT = 56; // Default MUI BottomNavigation height
 
-// IMPORTANT: This Footer uses `position: "fixed"`.
-// Consuming components/layouts MUST apply `paddingBottom: FOOTER_HEIGHT` (or appropriate value)
-// to their main scrollable content area to prevent content from being hidden underneath the footer.
-// Note: Components like Chat.jsx might need additional paddingBottom if they have other fixed elements above the footer (e.g., a fixed input bar).
-function Footer({ darkMode, setDarkMode, conversationActive, endConversation }) {
+// Helper function to determine the active value based on pathname
+const getCurrentValue = (pathname) => {
+    // Match base paths to highlight the correct icon
+    if (pathname.startsWith('/home')) return '/home';
+    if (pathname.startsWith('/profile')) return '/profile'; // This ensures Profile stays selected within /profile/*
+    if (pathname.startsWith('/chat')) return '/chat';
+    if (pathname.startsWith('/settings')) return '/settings';
+    // Add other base paths if needed
+    return false; // Return false if no route matches
+};
+
+// Removed conversationActive and endConversation from props
+function Footer({ darkMode, setDarkMode }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Determine the current value based on the path
-  const getCurrentValue = (pathname) => {
-    if (pathname.startsWith('/home')) return '/home';
-    if (pathname.startsWith('/profile')) return '/profile';
-    if (pathname.startsWith('/chat')) return '/chat';
-    if (pathname.startsWith('/settings')) return '/settings';
-    return false; // No match
-  };
-
-  const [value, setValue] = React.useState(getCurrentValue(location.pathname));
-
-  // Update value if the location changes externally
-  React.useEffect(() => {
-    setValue(getCurrentValue(location.pathname));
-  }, [location.pathname]);
+  // Directly calculate the current selected value based on location pathname
+  const currentValue = getCurrentValue(location.pathname);
 
   const handleChange = (event, newValue) => {
-     // Handle special case for 'end-conversation'
-     if (newValue === 'end-conversation') {
-       if (endConversation) {
-         endConversation(); // Call the passed function
-       }
-       // Don't navigate or change the selected value
-       return;
-     }
-    setValue(newValue);
-    navigate(newValue);
-  };
+     // Removed special handling for 'end-conversation'
 
-  // Check if the user is logged in - hide footer if not? Or adjust actions?
-  // For now, assume user is logged in if footer is visible.
+     // For all other actions, navigate to the corresponding path
+     navigate(newValue);
+
+     // The BottomNavigation component's visual state (`value` prop) will update on the next render
+     // because `location.pathname` will change, causing `currentValue` to be recalculated.
+  };
 
   return (
     <Paper
@@ -58,29 +45,21 @@ function Footer({ darkMode, setDarkMode, conversationActive, endConversation }) 
             bottom: 0,
             left: 0,
             right: 0,
-            zIndex: (theme) => theme.zIndex.drawer + 2, // Ensure footer is above input area
+            zIndex: (theme) => theme.zIndex.appBar + 1, // Ensure footer is above chat input area but potentially below modals
             height: `${FOOTER_HEIGHT}px`
         }}
         elevation={3}
      >
       <BottomNavigation
-        showLabels // Show labels below icons
-        value={value}
-        onChange={handleChange}
-        sx={{ height: '100%' }} // Ensure it fills the Paper height
+        showLabels // Always show labels
+        value={currentValue} // Value controlled by current route
+        onChange={handleChange} // Handles navigation logic
+        sx={{ height: '100%' }} // Fills the Paper height
       >
         <BottomNavigationAction label="Home" value="/home" icon={<HomeIcon />} />
         <BottomNavigationAction label="Profile" value="/profile" icon={<PersonIcon />} />
-         {/* Dynamically show Chat or End Conversation */}
-         {conversationActive ? (
-             <BottomNavigationAction
-                label="End Chat"
-                value="end-conversation" // Special value, handled in onChange
-                icon={<LogoutIcon color="error"/>} // Use a distinct icon/color
-             />
-         ) : (
-             <BottomNavigationAction label="Chat" value="/chat" icon={<ChatIcon />} />
-         )}
+        {/* Always show Chat button */}
+        <BottomNavigationAction label="Chat" value="/chat" icon={<ChatIcon />} />
         <BottomNavigationAction label="Settings" value="/settings" icon={<SettingsIcon />} />
       </BottomNavigation>
     </Paper>

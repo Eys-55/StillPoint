@@ -1,177 +1,94 @@
-import React, { useState, useEffect } from 'react';
-import { auth, firestore } from '../firebase.jsx';
-import { doc, getDoc } from 'firebase/firestore';
-import Header from '../nav/header.jsx';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { auth } from '../firebase.jsx'; // Firestore potentially not needed directly anymore
+// import Header from '../nav/header.jsx'; // Removed Header import
+import Insights from './Insights.jsx'; // Import the new Insights component
+import SummariesList from './SummariesList.jsx'; // Import the new SummariesList component
 import {
   Container,
-  Card,
-  CardContent,
   Typography,
-  Button,
   Box,
-  CircularProgress,
-  Grid,
-  Chip,
+  Grid, // Keep Grid for overall layout if needed, but not for side-by-side content
   Avatar,
   Paper,
-  Divider,
+  Stack,
+  useTheme,
+  ToggleButton, // For the slider/toggle
+  ToggleButtonGroup, // Group for the toggle
 } from '@mui/material';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
-import EditIcon from '@mui/icons-material/Edit';
-import ListAltIcon from '@mui/icons-material/ListAlt';
+import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
+import PsychologyOutlinedIcon from '@mui/icons-material/PsychologyOutlined'; // Icon for Insights toggle
+import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined'; // Icon for Summaries toggle
+import { HEADER_HEIGHT } from '../nav/header.jsx'; // Import for padding calculation if needed, or set a static value
+import { FOOTER_HEIGHT } from '../nav/footer.jsx'; // Import Footer height
 
 function UserProfile() {
-  const [questionnaireData, setQuestionnaireData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const user = auth.currentUser;
-  const navigate = useNavigate();
-  const isDarkMode = document.body.getAttribute('data-bs-theme') === 'dark'; // Keep for Header prop
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      if (user) {
-        try {
-          const docRef = doc(
-            firestore,
-            'users',
-            user.uid,
-            'questionnaire',
-            'responses'
-          );
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setQuestionnaireData(docSnap.data());
-          } else {
-            console.log('No questionnaire responses found for this user.');
-            setQuestionnaireData({ answers: [] }); // Set to empty array if no doc
-          }
-        } catch (error) {
-          console.error('Error fetching questionnaire data:', error);
-          // Optionally set an error state here
-        }
-      } else {
-        console.log('No user logged in.');
-      }
-      setLoading(false);
+  // State to manage the current view: 'insights' or 'summaries'
+  const [viewMode, setViewMode] = useState('insights'); // Default to insights view
+
+  const handleViewChange = (event, newViewMode) => {
+    // Prevent unselecting all options; if the same button is clicked again, do nothing
+    if (newViewMode !== null) {
+      setViewMode(newViewMode);
     }
-    fetchData();
-  }, [user]);
-
-  const handleSummaries = () => {
-    navigate('/summaries');
-  };
-
-  const handleEditQuestionnaire = () => {
-    navigate('/get-started'); // Navigate to the questionnaire page
   };
 
   return (
-    <div>
-      <Header mode="profile" darkMode={isDarkMode} />
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-              <AccountCircleIcon />
+    // Adjust main Box if it previously relied on Header for structure
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default', pt: 4 /* Add padding top */ }}>
+      {/* <Header mode="profile" darkMode={isDarkMode} /> */} {/* Removed Header */}
+      {/* Add bottom margin (mb) to account for fixed Footer height + buffer */}
+      <Container maxWidth="lg" sx={{ /* mt: 5, removed */ mb: `${FOOTER_HEIGHT + 16}px`, flexGrow: 1 }}>
+        {/* User Info Header */}
+        <Paper elevation={0} sx={{ p: {xs: 2, sm: 3}, mb: 4, borderRadius: 4, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Avatar sx={{ bgcolor: 'background.paper', color: 'primary.main', width: 56, height: 56 }}>
+              <AccountCircleOutlinedIcon fontSize="large" />
             </Avatar>
-            <Typography variant="h4" component="h1">
-              User Profile
-            </Typography>
-          </Box>
-          <Typography variant="h6" color="text.secondary">
-            {user ? user.email : 'Loading user data...'}
-          </Typography>
+            <Box>
+              <Typography variant="h5" component="h1" sx={{ fontWeight: 'medium' }}>
+                {user?.displayName || 'Your Profile'}
+              </Typography>
+              <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                {user ? user.email : 'Loading...'}
+              </Typography>
+            </Box>
+          </Stack>
         </Paper>
 
-        <Grid container spacing={3}>
-          {/* Questionnaire Section */}
-          <Grid item xs={12}>
-            <Card elevation={3}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <QuestionAnswerIcon color="action" sx={{ mr: 1 }} />
-                  <Typography variant="h5" component="h2">
-                    Questionnaire Responses
-                  </Typography>
-                </Box>
+        {/* View Mode Toggle (Slider) - Already Centered */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={handleViewChange}
+            aria-label="Profile view mode"
+            color="primary"
+            sx={{ bgcolor: 'background.paper', borderRadius: 5 }} // Background for the group
+          >
+            <ToggleButton value="insights" aria-label="insights questionnaire" sx={{ borderRadius: 5, px: 3, textTransform: 'none' }}>
+              <PsychologyOutlinedIcon sx={{ mr: 1 }} />
+              Insights
+            </ToggleButton>
+            <ToggleButton value="summaries" aria-label="conversation summaries" sx={{ borderRadius: 5, px: 3, textTransform: 'none' }}>
+              <ListAltOutlinedIcon sx={{ mr: 1 }} />
+              Reflections
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
 
-                {loading ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-                    <CircularProgress />
-                  </Box>
-                ) : questionnaireData && questionnaireData.answers && questionnaireData.answers.length > 0 ? (
-                  <Grid container spacing={2}>
-                    {questionnaireData.answers.map((item, index) => (
-                      <Grid item xs={12} sm={6} md={4} key={index}>
-                        <Card variant="outlined" sx={{ height: '100%' }}>
-                          <CardContent>
-                            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-                              {index + 1}. {item.question}
-                            </Typography>
-                            <Divider sx={{ my: 1 }} />
-                            <Chip
-                              label={item.answer || 'Not answered'}
-                              color="primary"
-                              variant="outlined"
-                              sx={{ mt: 1 }}
-                            />
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    ))}
-                  </Grid>
-                ) : (
-                  <Typography sx={{ mt: 2, fontStyle: 'italic' }}>
-                    No questionnaire responses found. Complete the questionnaire to personalize your experience.
-                  </Typography>
-                )}
+        {/* Conditional Content Area - Container handles centering */}
+        <Box>
+          {viewMode === 'insights' && <Insights />}
+          {viewMode === 'summaries' && <SummariesList />}
+        </Box>
 
-                <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  <Button
-                    variant="contained"
-                    startIcon={<EditIcon />}
-                    onClick={handleEditQuestionnaire}
-                    disabled={loading}
-                  >
-                    {questionnaireData && questionnaireData.answers && questionnaireData.answers.length > 0
-                      ? 'Edit Responses'
-                      : 'Start Questionnaire'}
-                  </Button>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          {/* Summaries Section */}
-          <Grid item xs={12}>
-            <Card elevation={3}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <ListAltIcon color="action" sx={{ mr: 1 }} />
-                  <Typography variant="h5" component="h2">
-                    Conversation Summaries
-                  </Typography>
-                </Box>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                  Review summaries of your past conversations.
-                </Typography>
-                <Button
-                  variant="contained"
-                  onClick={handleSummaries}
-                  disabled={loading}
-                  color="secondary"
-                >
-                  View Summaries
-                </Button>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
       </Container>
-    </div>
+        {/* Footer rendered conditionally in App.jsx */}
+    </Box>
   );
 }
 

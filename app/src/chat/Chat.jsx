@@ -7,20 +7,19 @@ import Footer, { FOOTER_HEIGHT } from '../nav/footer.jsx'; // Import FOOTER_HEIG
 import Header, { HEADER_HEIGHT } from '../nav/header.jsx'; // Import HEADER_HEIGHT
 import Sidebar from './sidebar.jsx';
 import { useNavigate } from 'react-router-dom';
-import { useChatHandlers } from './chat_hooks.jsx';
-import { questions } from '../meta/questions.js';
-import { Box, TextField, IconButton, Paper, Stack, Typography, CircularProgress, useTheme } from '@mui/material';
+import StopIcon from '@mui/icons-material/Stop'; // Changed from CheckIcon
+import SendIcon from '@mui/icons-material/Send';
+import { Box, TextField, IconButton, Paper, Stack, Typography, CircularProgress, useTheme, Fade } from '@mui/material'; // Import Fade
+import { alpha } from '@mui/material/styles'; // Import alpha for transparency
 import MicIcon from '@mui/icons-material/Mic';
 import StopIcon from '@mui/icons-material/Stop'; // Changed from CheckIcon
 import SendIcon from '@mui/icons-material/Send';
-// Removed PersonIcon and SmartToyIcon imports as they are no longer used
 
 // Constants for layout
 // HEADER_HEIGHT is now imported from Header.jsx
 // FOOTER_HEIGHT is now imported from Footer.jsx
 const INPUT_AREA_MIN_HEIGHT = '70px';
-const INPUT_AREA_MAX_HEIGHT = '200px';
-// SIDEBAR_WIDTH constant is defined in sidebar.jsx, not needed here for layout calculations
+// const INPUT_AREA_MAX_HEIGHT = '200px'; // Max height is controlled by TextField maxRows
 
 function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversationId, isSidebarCollapsed, setIsSidebarCollapsed }) {
   const [messages, setMessages] = useState([]);
@@ -33,13 +32,14 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
   const [recordingTime, setRecordingTime] = useState(0);
   const [lastSavedTime, setLastSavedTime] = useState(null);
   const [lastMessageCountAtSave, setLastMessageCountAtSave] = useState(null);
+  const [isSummarizing, setIsSummarizing] = useState(false); // State for summarization loading
   const chatSession = useRef(null);
   const messagesEndRef = useRef(null); // Ref to scroll to bottom
   const navigate = useNavigate();
   const vertexAI = getVertexAI(app);
   const theme = useTheme();
 
-  const conversationDocRef = useMemo(() => activeConversationId
+  const conversationDocRef = useMemo(() => activeConversationId && auth.currentUser?.uid
     ? doc(firestore, 'users', auth.currentUser.uid, 'conversations', activeConversationId)
     : null, [activeConversationId, auth.currentUser?.uid]);
 
@@ -60,7 +60,10 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
   useEffect(() => {
     async function fetchUserProfile() {
       const user = auth.currentUser;
-      if (!user) return;
+      if (!user) {
+         setUserProfile("<user_preference>\nUser not logged in.\n</user_preference>");
+         return;
+      }
       const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
       try {
           const docSnap = await getDoc(docRef);
@@ -69,13 +72,17 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
             if (data.answers && Array.isArray(data.answers)) {
               let profileSummary = "";
               data.answers.forEach(a => {
-                const q = questions.find(q => q.question.trim().toLowerCase() === a.question?.trim().toLowerCase());
+                // Ensure question exists and matches before trying to access details
+                const q = questions.find(q => q.question?.trim().toLowerCase() === a.question?.trim().toLowerCase());
                  if (q && q.optionDetails && a.answer && q.optionDetails[a.answer]) {
                    profileSummary += `- ${q.optionDetails[a.answer]}\n`;
+                 } else if (a.question && a.answer) {
+                    // Fallback: include question and answer directly if details missing
+                    profileSummary += `- ${a.question}: ${a.answer}\n`;
                  }
               });
               const formattedProfile = `<user_preference>\nThese are the user's preferences and traits:\n${profileSummary.trim()}\n</user_preference>`;
-              setUserProfile(formattedProfile);
+              setUserProfile(formattedProfile || "<user_preference>\nNo specific preferences recorded.\n</user_preference>");
             } else {
                  setUserProfile("<user_preference>\nNo preferences available.\n</user_preference>");
             }
@@ -100,11 +107,11 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
     }
 
     const systemInstructionText = `${prompts.system}\n\n${bundledSummaries}\n\n${prompts.userProfileLabel}\n${userProfile}`;
-    console.log("Initializing model with System Instruction:", systemInstructionText);
+    console.log("Initializing model with System Instruction."); // Simplified log
 
     try {
         return getGenerativeModel(vertexAI, {
-          model: "gemini-2.0-flash",
+          model: "gemini-1.5-flash", // Corrected model name
           systemInstruction: {
             parts: [{ text: systemInstructionText }]
           },
@@ -120,7 +127,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
   useEffect(() => {
     // Ensure model is initialized and activeConversationId is set
     if (!model || !activeConversationId || !conversationDocRef) {
-       console.log("Skipping chat load: Model or conversation ID not ready.");
+       // console.log("Skipping chat load: Model or conversation ID not ready.");
        setMessages([]); // Clear messages if no active conversation or model not ready
        setLastSavedTime(null);
        setLastMessageCountAtSave(null);
@@ -128,102 +135,144 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
     }
 
     const loadChat = async () => {
-      console.log("Loading chat for:", activeConversationId);
+      // console.log("Loading chat for:", activeConversationId);
       setConversationLoading(true);
-      setMessages([]); // Clear previous messages
+      setMessages([]); // Clear previous messages before loading new ones
       try {
         const conversationDoc = await getDoc(conversationDocRef);
         let initialHistory = [];
         if (conversationDoc.exists()) {
           const data = conversationDoc.data();
           initialHistory = data.messages || [];
-          setMessages(initialHistory);
-          const summarizedAt = data.summarizedAt;
+          setMessages(initialHistory); // Set the fetched messages
+          const summarizedAt = data.summarizedAt; // Use summarizedAt field
+          // Update last saved time based on 'summarizedAt'
           if (summarizedAt instanceof Timestamp) {
             setLastSavedTime(summarizedAt.toDate());
-            setLastMessageCountAtSave(initialHistory.length);
+            setLastMessageCountAtSave(initialHistory.length); // Set count at the time of last summary
           } else {
-            setLastSavedTime(null);
-            setLastMessageCountAtSave(null);
+            // If no summary timestamp, maybe use updatedAt? Or null?
+             setLastSavedTime(data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : null);
+             setLastMessageCountAtSave(initialHistory.length); // Count at last update
+             // setLastSavedTime(null); setLastMessageCountAtSave(null); // Or treat as never summarized
           }
         } else {
-          console.log("Creating new conversation document:", activeConversationId);
-          await setDoc(conversationDocRef, { messages: [], title: "New Conversation", createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-          setMessages([]);
-          setLastSavedTime(null);
-          setLastMessageCountAtSave(null);
+          // If conversation doesn't exist, create it (this might happen if ID is new)
+           console.log("Creating new conversation document:", activeConversationId);
+           await setDoc(conversationDocRef, { messages: [], title: "New Conversation", createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+           setMessages([]);
+           setLastSavedTime(null);
+           setLastMessageCountAtSave(null);
+           initialHistory = []; // Ensure history is empty for chat session start
         }
 
-        // Initialize chat session
-        const formattedHistory = initialHistory.map(msg => ({
-          role: msg.role === 'user' ? 'user' : 'model',
+        // --- Validate and Filter History ---
+        const validatedHistory = [];
+        if (initialHistory.length > 0) {
+          // Always add the first message
+          validatedHistory.push(initialHistory[0]);
+
+          // Iterate from the second message
+          for (let i = 1; i < initialHistory.length; i++) {
+            const currentMsg = initialHistory[i];
+            const lastAddedMsg = validatedHistory[validatedHistory.length - 1];
+
+            // Only add the current message if its role is different from the last added message's role
+            // Or if the last message was 'model' (bot), allowing another 'model' (though unlikely) or 'user'
+            if (currentMsg.role !== lastAddedMsg.role || lastAddedMsg.role === 'bot') {
+               validatedHistory.push(currentMsg);
+            } else {
+               // Found consecutive 'user' roles. Log it and skip the current message.
+               console.warn(`Skipping consecutive message with role '${currentMsg.role}' at index ${i} for conversation ${activeConversationId}`);
+               // Optionally, merge consecutive user messages? For now, just skip.
+               // lastAddedMsg.text += `\n\n${currentMsg.text}`; // Example merge (use with caution)
+            }
+          }
+        }
+        // --- End Validation ---
+
+        // Initialize chat session with the validated and formatted history
+        const formattedHistory = validatedHistory.map(msg => ({
+          role: msg.role === 'user' ? 'user' : 'model', // Map 'bot' to 'model'
           parts: [{ text: msg.text }],
         }));
 
-        console.log("Starting chat session with history:", formattedHistory);
+        console.log("Starting chat session with validated history:", formattedHistory);
         chatSession.current = model.startChat({
            history: formattedHistory,
            generationConfig: { maxOutputTokens: 1000 },
         });
-        console.log("Chat session started.");
+        // console.log("Chat session started.");
 
       } catch (error) {
          console.error("Error loading chat:", error);
+         // Consider setting an error state to show the user
       } finally {
          setConversationLoading(false);
       }
     };
 
     loadChat();
-    // Cleanup function if needed when conversation changes
+    // Cleanup function if needed when conversation changes (e.g., clear interval timers)
     // return () => { chatSession.current = null; console.log("Chat session cleared"); };
 
   }, [activeConversationId, conversationDocRef, model]); // Dependencies: conversation ID and the model itself
 
-
-  // Save chat function (no longer passed to hooks, used internally by hooks)
-  // const saveChat = async (newMessages) => { ... } // Defined within chat_hooks now
 
   // Helper to get summaries (used in useEffect above)
   const getAllSummaries = async () => {
     const user = auth.currentUser;
     if (!user) return '';
     const convRef = collection(firestore, 'users', user.uid, 'conversations');
-    const q = query(convRef);
+    const q = query(convRef); // Maybe add orderBy('updatedAt', 'desc').limit(5) ?
     try {
         const snapshot = await getDocs(q);
         const summaries = [];
         snapshot.forEach(docSnap => {
           const data = docSnap.data();
-          if (data.summary) summaries.push(data.summary);
+          // Only include summaries that exist and are non-empty
+          if (data.summary && data.summary.trim() !== '') {
+             summaries.push(data.summary);
+          }
         });
+        // Format summaries for the prompt context
         if (summaries.length > 0) {
-            return prompts.disclaimer.replace('</disclaimer>', `\n${summaries.join('\n---\n')}\n</disclaimer>`);
+             return prompts.disclaimer.replace('</disclaimer>', `\n${summaries.join('\n---\n')}\n</disclaimer>`);
         }
-        return prompts.disclaimer;
+        return prompts.disclaimer; // Return default disclaimer if no summaries found
     } catch (error) {
          console.error("Error fetching summaries:", error);
-         return prompts.disclaimer;
+         return prompts.disclaimer; // Return default disclaimer on error
     }
   };
 
-  // Use Chat Handlers Hook (pass necessary state and setters)
+  // Use Chat Handlers Hook
   const { handleSubmit, handleVoiceButton, handleEndConversation, handleSummarizeHeader, handleEndConversationProfile } = useChatHandlers({
     messages, setMessages, input, setInput, activeConversationId, setActiveConversationId,
-    chatSession, model, setLoading, prompts, navigate, isRecording, setIsRecording,
-    setRecordingTime, bundledSummaries, userProfile
+    chatSession, model, setLoading, // Keep setLoading for message sending
+    setIsSummarizing, // Pass the new setter
+    prompts, navigate, isRecording, setIsRecording,
+    setRecordingTime, bundledSummaries, userProfile, conversationDocRef // Pass conversationDocRef
   });
 
   // Handler for the summarize button in the header
   const handleSummarizeAndUpdate = async () => {
-    await handleSummarizeHeader();
-    setLastSavedTime(new Date());
-    setLastMessageCountAtSave(messages.length);
+    const success = await handleSummarizeHeader();
+    if (success) { // Only update time if summarization was successful
+       const now = new Date();
+       setLastSavedTime(now); // Update local state immediately
+       setLastMessageCountAtSave(messages.length);
+       // Also update Firestore 'summarizedAt' timestamp
+       if (conversationDocRef) {
+           await updateDoc(conversationDocRef, { summarizedAt: Timestamp.fromDate(now) });
+       }
+    }
   };
 
   // --- JSX Rendering ---
   return (
     <Box sx={{ display: 'flex', height: '100vh', flexDirection: 'column', bgcolor: 'background.default' }}>
+      {/* Header is fixed, takes space via paddingTop on main */}
       <Header
         mode="chat"
         onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -232,44 +281,36 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
         lastSavedTime={lastSavedTime}
         hasNewMessages={lastSavedTime ? (messages.length > (lastMessageCountAtSave ?? 0)) : messages.length > 0}
         hasMessages={messages.length > 0}
-        sx={{
-           position: 'fixed',
-           top: 0,
-           width: '100%', // Always full width
-           left: 0, // Always align left
-           zIndex: (theme) => theme.zIndex.drawer + 1, // Ensure header is above drawer backdrop but might be below drawer content
-           // Removed transition related to sidebar
-         }}
+        // sx prop removed - Header component handles its fixed positioning
       />
 
+      {/* Sidebar uses temporary variant, overlays content */}
       <Sidebar
         activeConversationId={activeConversationId}
         setActiveConversationId={setActiveConversationId}
         isSidebarCollapsed={isSidebarCollapsed}
-        setIsSidebarCollapsed={setIsSidebarCollapsed} // Passed to handle onClose
+        setIsSidebarCollapsed={setIsSidebarCollapsed}
         darkMode={darkMode}
-        // Sidebar itself is temporary and handles its own state via isSidebarCollapsed prop
       />
 
-      {/* Main Chat Area */}
-      <Box
-        component="main"
-        sx={{
+      {/* Main Chat Area Container (Relative positioning context for overlay) */}
+      <Box sx={{ flexGrow: 1, position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+          {/* Main Chat Area */}
+          <Box
+            component="main"
+            sx={{
           flexGrow: 1,
-          overflow: 'hidden',
+          overflow: 'hidden', // Hide potential overflow, child Box handles scrolling
           display: 'flex',
           flexDirection: 'column',
-          // marginLeft: mainContentMarginLeft, // REMOVED - No margin shift
-          // transition: theme.transitions.create('margin', { ... }), // REMOVED - No transition needed
           // --- Padding to prevent overlap with fixed Header, Input Area, and Footer ---
-          paddingTop: `${HEADER_HEIGHT}px`, // Ensures content starts below the fixed Header.
-          // Padding bottom accounts for the combined height of the fixed Input Area (min height) and the fixed Footer, plus a buffer.
-          // This ensures scrollable content does not get hidden underneath these fixed bottom elements.
+          paddingTop: `${HEADER_HEIGHT}px`,
+          // Padding bottom accounts for Input Area (min height) + Footer height + buffer
           paddingBottom: `calc(${INPUT_AREA_MIN_HEIGHT} + ${FOOTER_HEIGHT}px + 16px)`,
-          // --- End Padding ---
         }}
       >
-         {/* Message Display Area */}
+         {/* Message Display Area (Scrollable) */}
         <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
           {conversationLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -283,13 +324,12 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
             <Stack spacing={2}>
               {messages.map((msg, index) => (
                 <Stack
-                  key={index} // Consider more stable keys if messages can be inserted/deleted mid-list
+                  key={index} // Using index is okay if list doesn't reorder/insert mid-list often
                   direction="row"
-                  spacing={1} // Keep spacing for now, might adjust later
+                  spacing={1}
                   alignItems="flex-start"
                   justifyContent={msg.role === 'user' ? 'flex-end' : 'flex-start'}
                 >
-                  {/* Removed bot Avatar */}
                   <Paper
                     elevation={1}
                     sx={{
@@ -297,26 +337,29 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
                       borderRadius: msg.role === 'user' ? '20px 20px 5px 20px' : '20px 20px 20px 5px',
                       bgcolor: msg.role === 'user' ? 'primary.main' : 'background.paper',
                       color: msg.role === 'user' ? 'primary.contrastText' : 'text.primary',
-                      maxWidth: '85%', // Allow slightly wider messages now
+                      maxWidth: '85%',
                       wordWrap: 'break-word',
-                      opacity: msg.temp ? 0.7 : 1,
+                      opacity: msg.temp ? 0.7 : 1, // Indicate temporary messages
                     }}
                   >
-                     {/* Render potentially multiline text correctly */}
-                     <Typography variant="body2" style={{ whiteSpace: 'pre-wrap' }}>
-                       {msg.text || (msg.role === 'bot' && "...")}
+                     <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}> {/* Use sx instead of style */}
+                       {/* Display text or placeholder */}
+                       {msg.text || (msg.role !== 'user' ? "Thinking..." : "")}
                      </Typography>
                   </Paper>
-                  {/* Removed user Avatar */}
                 </Stack>
               ))}
+              {/* Loading indicator during message send */}
+              {loading && !conversationLoading && (
+                  <Stack direction="row" spacing={1} alignItems="flex-start" justifyContent='flex-start'>
+                       <Paper elevation={1} sx={{ p: 1.5, borderRadius: '20px 20px 20px 5px', bgcolor: 'background.paper', color: 'text.primary', maxWidth: '85%' }}>
+                           <CircularProgress size={18} sx={{ verticalAlign: 'middle' }}/>
+                       </Paper>
+                  </Stack>
+              )}
               <div ref={messagesEndRef} /> {/* Scroll target */}
             </Stack>
           )}
-           {/* Loading indicator during message send */}
-           {loading && !conversationLoading && (
-               <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}><CircularProgress size={24} /></Box>
-           )}
         </Box>
       </Box>
 
@@ -325,76 +368,92 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
          elevation={3}
          sx={{
            position: 'fixed',
-           bottom: `${FOOTER_HEIGHT}px`, // Use imported constant
-           left: 0, // Always align left
+           bottom: `${FOOTER_HEIGHT}px`, // Position above Footer
+           left: 0,
            right: 0, // Spans full width
-           p: 1, // Reduced padding slightly
-           zIndex: (theme) => theme.zIndex.drawer + 1, // Above backdrop, might be below drawer content
-           // transition: theme.transitions.create('left', { ... }), // REMOVED - No transition needed
+           p: 1,
+           zIndex: (theme) => theme.zIndex.appBar + 1, // Ensure above content, below potential modals
            bgcolor: 'background.paper',
-           display: 'flex', // Use flex to align items
-           alignItems: 'flex-start', // Align items to the top for multiline
+           display: 'flex',
+           alignItems: 'flex-start',
          }}
        >
-         {/* Disable form/input if no active conversation */}
          <form onSubmit={handleSubmit} style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
            <TextField
              multiline
              fullWidth
              variant="outlined"
-             placeholder={"Type your message..."} // Always allow typing
+             placeholder={"Type your message..."}
              value={loading ? "Thinking..." : (isRecording ? `Recording: ${recordingTime}s...` : input)}
              onChange={(e) => setInput(e.target.value)}
              onKeyDown={(e) => {
                if (e.key === 'Enter' && !e.shiftKey) {
                  e.preventDefault();
-                 // Allow submit even if no activeConversationId (handleSubmit handles creation)
-                 if (!loading && !isRecording) handleSubmit(e);
+                 if (!loading && !isRecording && input.trim()) handleSubmit(e); // Check input trim
                }
              }}
-             disabled={loading || isRecording || conversationLoading} // Remove !activeConversationId check
+             disabled={loading || isRecording || conversationLoading || !chatSession.current} // Add !chatSession.current check
              size="small"
-             maxRows={5} // Controls max height
-              InputProps={{
-                 sx: { borderRadius: '20px', py: 1 } // Adjust padding
+             maxRows={5}
+             InputProps={{
+                 sx: { borderRadius: '20px', py: 1 }
              }}
-             sx={{ mr: 1 }} // Margin between textfield and buttons
+             sx={{ mr: 1 }}
            />
-           <Stack direction="row" spacing={0.5}> {/* Reduced spacing */}
+           <Stack direction="row" spacing={0.5}>
              <IconButton
                onClick={handleVoiceButton}
-               disabled={loading || conversationLoading} // Remove !activeConversationId check
+               disabled={loading || conversationLoading}
                color={isRecording ? "error" : "primary"}
-               size="small" // Smaller buttons
+               size="small"
              >
                {isRecording ? <StopIcon /> : <MicIcon />}
              </IconButton>
              <IconButton
                type="submit"
-               disabled={loading || isRecording || !input.trim() || conversationLoading} // Remove !activeConversationId check
+               disabled={loading || isRecording || !input.trim() || conversationLoading || !chatSession.current} // Add !chatSession.current check
                color="primary"
-               size="small" // Smaller buttons
+               size="small"
              >
                <SendIcon />
              </IconButton>
            </Stack>
          </form>
        </Paper>
+      {/* </Box> */} {/* Removed the closing tag from previous change */}
+
+      {/* Summarization Loading Overlay */}
+      <Fade in={isSummarizing} timeout={300}>
+        <Box
+          sx={{
+            position: 'absolute',
+            top: `${HEADER_HEIGHT}px`, // Start below header
+            left: 0,
+            right: 0,
+            bottom: `${FOOTER_HEIGHT}px`, // End above footer
+            bgcolor: alpha(theme.palette.background.default, 0.85), // Semi-transparent background
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10, // Ensure it's above chat content
+          }}
+        >
+          <CircularProgress />
+          <Typography sx={{ mt: 2 }} color="text.secondary">
+            Summarizing...
+          </Typography>
+        </Box>
+      </Fade>
+     </Box> {/* Close the relative container Box */}
+
 
       {/* Footer fixed at the very bottom */}
+      {/* sx prop removed - Footer component handles its fixed positioning */}
       <Footer
-        sx={{
-            position: 'fixed',
-            bottom: 0,
-            width: '100%', // Always full width
-            left: 0, // Always align left
-            zIndex: (theme) => theme.zIndex.drawer + 2, // Ensure footer is above input area
-            // transition: theme.transitions.create(['width', 'left'], { ... }), // REMOVED - No transition needed
-        }}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
-        conversationActive={!!activeConversationId}
-        endConversation={handleEndConversationProfile}
+        // conversationActive and endConversation props removed
       />
     </Box>
   );

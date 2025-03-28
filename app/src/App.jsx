@@ -6,7 +6,7 @@ import { auth } from './firebase.jsx';
 import { signOut } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import Chat from './chat/chat.jsx';
-import Summaries from './profile/summaries.jsx';
+
 import UserProfile from './profile/user_profile.jsx';
 import Footer from './nav/footer.jsx';
 import Privacy from './user/privacy.jsx';
@@ -126,14 +126,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/summaries"
-            element={
-              <ProtectedRoute>
-                <Summaries />
-              </ProtectedRoute>
-            }
-          />
+
           <Route
             path="/profile"
             element={

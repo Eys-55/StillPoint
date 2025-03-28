@@ -8,7 +8,7 @@ import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
-import Header from '../nav/header.jsx'; // Assuming Header adapts or doesn't need explicit mode
+// import Header from '../nav/header.jsx'; // Removed Header import
 import { auth, firestore } from '../firebase.jsx';
 import { doc, getDoc } from 'firebase/firestore';
 import Tracker from './tracker.jsx';
@@ -16,6 +16,9 @@ import PsychologyIcon from '@mui/icons-material/Psychology';
 import ChatIcon from '@mui/icons-material/Chat';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import DescriptionIcon from '@mui/icons-material/Description';
+import WavingHandIcon from '@mui/icons-material/WavingHand'; // Friendly icon
+import { HEADER_HEIGHT } from '../nav/header.jsx'; // Import for padding calculation if needed, or set a static value
+import { FOOTER_HEIGHT } from '../nav/footer.jsx'; // Import Footer height
 
 function Home() {
   const navigate = useNavigate();
@@ -24,31 +27,24 @@ function Home() {
   const [userName, setUserName] = useState('');
 
   useEffect(() => {
-    const checkUserStatus = async () => {
+    const checkUserStatus = async (user) => {
       setLoading(true);
-      const user = auth.currentUser;
-      if (user) {
-        setUserName(user.displayName || 'User'); // Get display name
-        const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
-        try {
-          const docSnap = await getDoc(docRef);
-          setQuestionnaireCompleted(docSnap.exists());
-        } catch (error) {
-          console.error("Error checking questionnaire status:", error);
-          setQuestionnaireCompleted(false);
-        }
-      } else {
-        setQuestionnaireCompleted(false);
-        setUserName('');
-        // No need to navigate here, ProtectedRoute handles it
+      setUserName(user.displayName || 'User'); // Get display name
+      const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
+      try {
+        const docSnap = await getDoc(docRef);
+        setQuestionnaireCompleted(docSnap.exists());
+      } catch (error) {
+        console.error("Error checking questionnaire status:", error);
+        setQuestionnaireCompleted(false); // Assume not completed on error
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    // Use onAuthStateChanged for reliability
     const unsubscribe = auth.onAuthStateChanged(user => {
       if (user) {
-        checkUserStatus();
+        checkUserStatus(user);
       } else {
         // If user becomes null (logged out), ProtectedRoute will handle redirect
         setLoading(false);
@@ -57,13 +53,14 @@ function Home() {
       }
     });
 
-    return () => unsubscribe();
+    return () => unsubscribe(); // Cleanup listener on unmount
 
-  }, []); // No navigate dependency needed here
+  }, []); // Empty dependency array, effect runs once on mount and cleanup on unmount
 
   const handleNavigation = (path) => {
     if (questionnaireCompleted === false && path !== '/get-started') {
-      alert("Please complete the questionnaire first to access this feature.");
+      // Consider using a Snackbar or a more gentle notification
+      alert("Please complete the questionnaire first to unlock this feature.");
       return;
     }
     navigate(path);
@@ -72,51 +69,73 @@ function Home() {
   // Loading state display
   if (loading || questionnaireCompleted === null) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default' }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    // Using Box with background.default ensures the theme's background color is applied
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
-       {/* Header might need darkMode prop if it has non-MUI elements needing style changes */}
-      <Header mode="home" />
-      <Container component="main" sx={{ mt: 4, mb: 4, flexGrow: 1 }}>
-        <Paper elevation={2} sx={{ p: { xs: 2, md: 4 }, mb: 3 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Welcome back, {userName}! <PsychologyIcon sx={{ verticalAlign: 'middle' }}/>
+    // Adjust main Box if it previously relied on Header for structure
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default', pt: 4 /* Add padding top if needed */ }}>
+      {/* <Header mode="home" /> */} {/* Removed Header */}
+      {/* Adjust top margin (mt) to account for removed header, or use padding on the parent Box */}
+      {/* Add bottom margin (mb) to account for fixed Footer height + buffer */}
+      <Container component="main" sx={{ /* mt: 4, removed */ mb: `${FOOTER_HEIGHT + 16}px`, flexGrow: 1 }}>
+        <Paper
+          elevation={2}
+          sx={{
+            p: { xs: 2, md: 4 },
+            mb: 3,
+            borderRadius: 4, // Rounded corners
+            // bgcolor: 'primary.light', // Optional: Lighter background for paper
+            // color: 'primary.contrastText' // Optional: Ensure text contrasts
+          }}
+        >
+          <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', fontWeight: 'medium' }}>
+            <WavingHandIcon sx={{ mr: 1, color: 'warning.main' }}/> Hello, {userName}!
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Ready to continue your mental wellness journey? Here's a quick overview.
+            Welcome back! Ready to check in or explore your wellness journey?
           </Typography>
         </Paper>
 
         {questionnaireCompleted === false && (
           <Alert
-            severity="warning"
-            sx={{ mb: 3 }}
+            severity="info" // Changed from warning for a softer tone
+            sx={{ mb: 3, borderRadius: 2 }} // Rounded alert
+            icon={<PsychologyIcon fontSize="inherit" />}
             action={
               <Button
-                color="inherit"
+                color="primary" // Use primary color for action
                 size="small"
+                variant="contained" // Make it stand out slightly more
+                disableElevation
                 startIcon={<DescriptionIcon />}
-                onClick={() => navigate('/get-started')} // Direct navigation is fine here
+                onClick={() => navigate('/get-started')}
+                sx={{ borderRadius: 5 }} // Rounded button
               >
-                Answer Now
+                Get Started
               </Button>
             }
           >
-            Please complete your initial questionnaire to personalize your experience.
+            Complete your initial questionnaire to personalize your experience and unlock all features.
           </Alert>
         )}
 
-        <Stack spacing={3}>
+        <Stack spacing={4}> {/* Increased spacing */}
           <Tracker />
 
-          <Paper elevation={2} sx={{ p: 2 }}>
-             <Typography variant="h6" gutterBottom>Quick Actions</Typography>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 3, // Increased padding
+              borderRadius: 4 // Rounded corners
+            }}
+          >
+             <Typography variant="h6" gutterBottom sx={{ fontWeight: 'medium', textAlign: 'center' }}>
+               Quick Actions
+             </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
               <Button
                 variant="contained"
@@ -124,25 +143,25 @@ function Home() {
                 startIcon={<ChatIcon />}
                 onClick={() => handleNavigation('/chat')}
                 disabled={questionnaireCompleted === false}
-                sx={{ flexGrow: 1 }}
+                sx={{ flexGrow: 1, borderRadius: 5, py: 1.5 }} // Rounded & slightly taller
               >
-                Start Chatting
+                Chat with Aura
               </Button>
               <Button
                 variant="outlined"
-                color="secondary"
+                color="secondary" // Keep secondary, outline is less prominent
                 startIcon={<AccountCircleIcon />}
                 onClick={() => handleNavigation('/profile')}
-                 disabled={questionnaireCompleted === false}
-                sx={{ flexGrow: 1 }}
+                disabled={questionnaireCompleted === false}
+                sx={{ flexGrow: 1, borderRadius: 5, py: 1.5 }} // Rounded & slightly taller
               >
-                View Profile & Summaries
+                Profile & Insights
               </Button>
             </Stack>
           </Paper>
         </Stack>
       </Container>
-      {/* Footer is now rendered conditionally in App.jsx */}
+      {/* Footer rendered conditionally in App.jsx */}
     </Box>
   );
 }

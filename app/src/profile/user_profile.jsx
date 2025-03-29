@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { auth } from '../firebase.jsx'; // Firestore potentially not needed directly anymore
 // import Header from '../nav/header.jsx'; // Removed Header import
-import Insights from './Insights.jsx'; // Import the new Insights component
-import SummariesList from './SummariesList.jsx'; // Import the new SummariesList component
+import Insights from './insights/Insights.jsx'; // Import the new Insights component
+import SummariesList from './summaries/SummariesList.jsx'; // Import the new SummariesList component
 import {
   Container,
   Typography,

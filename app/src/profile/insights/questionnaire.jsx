@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { auth, firestore } from '../firebase.jsx';
+import { auth, firestore } from '../../firebase.jsx';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { questions } from '../meta/questions.js';
+import { questions } from '../../meta/questions.js';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,

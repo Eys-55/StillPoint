@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, firestore } from '../firebase.jsx';
+import { auth, firestore } from '../../firebase.jsx';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { questions } from '../meta/questions.js'; // Import questions definition
+import { questions } from '../../meta/questions.js'; // Import questions definition
 import {
   Card,
   CardContent,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSummaries } from './summaries_hooks.jsx';
-import { auth, firestore } from '../firebase.jsx';
+import { auth, firestore } from '../../firebase.jsx';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import {
   Typography,

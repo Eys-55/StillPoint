@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import Login from './user/login.jsx';
 import Home from './home/home.jsx';
 import { auth } from './firebase.jsx';
 import { signOut } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import Chat from './chat/chat.jsx';
+import Chat from './chat/chat/Chat.jsx';
+import LandingPage from './landing/LandingPage.jsx'; // Import LandingPage
 
 import UserProfile from './profile/user_profile.jsx';
 import Footer from './nav/footer.jsx';
 import Privacy from './user/privacy.jsx';
 import Settings from './user/settings.jsx';
-import Questionnaire from './profile/questionnaire.jsx';
-import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
-import { Box } from '@mui/material'; // Import Box for loading
+import Questionnaire from './profile/insights/questionnaire.jsx';
+import { ThemeProvider, createTheme, CssBaseline, CircularProgress } from '@mui/material'; // Import CircularProgress
+import { Box } from '@mui/material';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -35,24 +36,31 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-function ProtectedRoute({ children }) {
+// Updated ProtectedRoute to handle loading state better and redirect unauthenticated users
+function ProtectedRoute() {
   const [user, loading] = useAuthState(auth);
+  const location = useLocation();
 
   if (loading) {
-     // Use a simple loading indicator consistent with MUI theme potentially
+     // Use a simple loading indicator consistent with MUI theme
      return (
        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-         Loading...
+         <CircularProgress />
        </Box>
      );
   }
-  if (!user) return <Navigate to="/login" replace />;
-  return children;
+
+  // If not loading and no user, redirect to login, preserving the intended destination
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // If user is authenticated, render the child routes/component
+  return <Outlet />; // Use Outlet to render nested routes
 }
 
 function App() {
   const location = useLocation();
-  // Initialize darkMode state from localStorage or system preference if desired
   const [darkMode, setDarkMode] = useState(() => {
     const savedMode = localStorage.getItem('darkMode');
     return savedMode ? JSON.parse(savedMode) : false;
@@ -60,24 +68,61 @@ function App() {
   });
   const [activeConversationId, setActiveConversationId] = useState(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [user] = useAuthState(auth);
+  const [user, loading] = useAuthState(auth); // Use loading state here too
 
-  // Update localStorage and body attribute when darkMode changes
   useEffect(() => {
     document.body.setAttribute("data-bs-theme", darkMode ? "dark" : "light");
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
 
-  // Create MUI theme based on darkMode state
   const theme = useMemo(
     () =>
       createTheme({
         palette: {
           mode: darkMode ? 'dark' : 'light',
-          // You can customize primary/secondary colors here for light/dark modes
           // primary: { main: darkMode ? '#90caf9' : '#1976d2' },
           // secondary: { main: darkMode ? '#f48fb1' : '#dc004e' },
         },
+         // Apply consistent shape globally if desired
+         shape: {
+           borderRadius: 16, // Example global border radius
+         },
+         components: {
+           // Consistent button rounding (can be overridden)
+           MuiButton: {
+             styleOverrides: {
+               root: {
+                 borderRadius: 50,
+               },
+             },
+           },
+           // Consistent TextField rounding (can be overridden)
+           MuiTextField: {
+             styleOverrides: {
+               root: {
+                 '& .MuiOutlinedInput-root': {
+                   borderRadius: 50,
+                 },
+               },
+             },
+           },
+           // Consistent Card rounding (can be overridden)
+           MuiCard: {
+             styleOverrides: {
+               root: {
+                 borderRadius: 20,
+               }
+             }
+           },
+           // Consistent Alert rounding (can be overridden)
+           MuiAlert: {
+             styleOverrides: {
+               root: {
+                 borderRadius: 12,
+               }
+             }
+           }
+         }
       }),
     [darkMode],
   );
@@ -86,86 +131,60 @@ function App() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      // Optionally clear state like activeConversationId etc.
       setActiveConversationId(null);
+      // Navigate to landing page after logout
+      // No need to explicitly navigate here if using ProtectedRoute correctly,
+      // as the auth state change will trigger redirection.
     } catch (err) {
       console.error("Error signing out:", err);
     }
   };
 
+  // Determine if the footer should be shown
+  const showFooter = user && !loading && location.pathname !== '/chat' && location.pathname !== '/login' && location.pathname !== '/';
+
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline /> {/* Ensures background and text colors match theme */}
+      <CssBaseline />
       <ErrorBoundary>
         <Routes>
-          {/* Login route doesn't need protection */}
+          {/* Public Routes */}
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
 
-          {/* Protected Routes */}
-          <Route
-            path="/home"
-            element={
-              <ProtectedRoute>
-                {/* Pass setDarkMode if Header needs to toggle it */}
-                <Home />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/chat"
-            element={
-              <ProtectedRoute>
+          {/* Protected Routes Wrapper */}
+          <Route element={<ProtectedRoute />}>
+            {/* Routes accessible only when logged in */}
+            <Route path="/home" element={<Home />} />
+            <Route
+              path="/chat"
+              element={
                 <Chat
-                  darkMode={darkMode} // Pass darkMode state
-                  setDarkMode={setDarkMode} // Pass setter
+                  darkMode={darkMode}
+                  setDarkMode={setDarkMode}
                   activeConversationId={activeConversationId}
                   setActiveConversationId={setActiveConversationId}
                   isSidebarCollapsed={isSidebarCollapsed}
                   setIsSidebarCollapsed={setIsSidebarCollapsed}
                 />
-              </ProtectedRoute>
-            }
-          />
+              }
+            />
+            <Route path="/profile" element={<UserProfile />} />
+            <Route
+              path="/settings"
+              element={<Settings darkMode={darkMode} setDarkMode={setDarkMode} />}
+            />
+            <Route path="/privacy" element={<Privacy />} /> {/* Keep privacy potentially accessible */}
+            <Route path="/get-started" element={<Questionnaire />} />
+          </Route>
 
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <UserProfile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                {/* Settings component already receives darkMode and setDarkMode */}
-                <Settings darkMode={darkMode} setDarkMode={setDarkMode} />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/privacy"
-            element={
-              <ProtectedRoute>
-                {/* Privacy component might need theme adaptation if not using MUI heavily */}
-                <Privacy />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/get-started"
-            element={
-              <ProtectedRoute>
-                <Questionnaire />
-              </ProtectedRoute>
-            }
-          />
-          {/* Default redirect for authenticated users */}
-          <Route path="*" element={<Navigate to="/home" replace />} />
+          {/* Fallback Route */}
+          {/* If logged in, redirect unknown paths to home. If not logged in, redirect to landing. */}
+          <Route path="*" element={<Navigate to={user ? "/home" : "/"} replace />} />
+
         </Routes>
-        {/* Conditionally render Footer based on user auth and route */}
-        {user && location.pathname !== '/chat' && location.pathname !== '/login' && (
+        {/* Conditionally render Footer */}
+        {showFooter && (
           <Footer darkMode={darkMode} setDarkMode={setDarkMode} />
         )}
       </ErrorBoundary>

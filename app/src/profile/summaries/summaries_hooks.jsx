@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
-import { app, auth, firestore } from '../firebase.jsx';
+import { app, auth, firestore } from '../../firebase.jsx';
 import { doc, getDoc, updateDoc, collection, query, getDocs, deleteDoc, orderBy, Timestamp } from 'firebase/firestore';
-import prompts from '../meta/prompts.js';
+import prompts from '../../meta/prompts.js';
 
 export function useSummaries(conversationId = null, initialMessages = []) { // Default conversationId to null
   const navigate = useNavigate();
@@ -73,7 +73,7 @@ export function useSummaries(conversationId = null, initialMessages = []) { // D
     try {
       const vertexAI = getVertexAI(app);
       const model = getGenerativeModel(vertexAI, {
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         geminiApiKey: import.meta.env.VITE_GEMINI_API_KEY, // Ensure API key is loaded
       });
 
@@ -276,14 +276,7 @@ export function useSummaries(conversationId = null, initialMessages = []) { // D
       // generateSummary now includes fetching logic if messages are empty
       generateSummary();
     }
-     // Clear single summary state if conversationId becomes null (e.g., navigating away)
-     if (!conversationId) {
-         setSummary('');
-         setTitle('');
-         setMessages([]);
-         setError('');
-         setLoading(false);
-     }
+    // State clearing is removed - let component lifecycle/hook re-initialization handle reset
   }, [conversationId, generateSummary]); // Rerun if conversationId changes or generateSummary function reference changes
 
   // Effect for the BUNDLED summaries view: Fetch all summaries if NO conversationId is provided
@@ -292,13 +285,7 @@ export function useSummaries(conversationId = null, initialMessages = []) { // D
     if (!conversationId && auth.currentUser) {
       fetchAndSetBundledSummaries();
     }
-     // Clear bundled state if conversationId IS provided (switching to single view)
-     // or if user logs out
-     if (conversationId || !auth.currentUser) {
-         setBundledSummaries([]);
-         setErrorBundled('');
-         setLoadingBundled(false);
-     }
+    // State clearing is removed - let component lifecycle/hook re-initialization handle reset
 
      // Re-fetch if user logs in/out (auth state change)
      const unsubscribe = auth.onAuthStateChanged(user => {

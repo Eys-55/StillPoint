@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { app, auth, firestore } from '../firebase.jsx';
+import { app, auth, firestore } from '../../firebase.jsx';
 import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
-import prompts from '../meta/prompts.js';
+import prompts from '../../meta/prompts.js';
 import { doc, getDoc, setDoc, updateDoc, collection, query, getDocs, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
-import Footer, { FOOTER_HEIGHT } from '../nav/footer.jsx'; // Import FOOTER_HEIGHT
-import Header, { HEADER_HEIGHT } from '../nav/header.jsx'; // Import HEADER_HEIGHT
-import Sidebar from './sidebar.jsx';
+import Footer, { FOOTER_HEIGHT } from '../../nav/footer.jsx'; // Import FOOTER_HEIGHT
+import Header, { HEADER_HEIGHT } from '../../nav/header.jsx'; // Import HEADER_HEIGHT
+import Sidebar from '../sidebar.jsx';
+import { useChatHandlers } from './chat_hooks.jsx'; // Import the hook
 import { useNavigate } from 'react-router-dom';
 import StopIcon from '@mui/icons-material/Stop'; // Changed from CheckIcon
 import SendIcon from '@mui/icons-material/Send';
 import { Box, TextField, IconButton, Paper, Stack, Typography, CircularProgress, useTheme, Fade } from '@mui/material'; // Import Fade
 import { alpha } from '@mui/material/styles'; // Import alpha for transparency
 import MicIcon from '@mui/icons-material/Mic';
-import StopIcon from '@mui/icons-material/Stop'; // Changed from CheckIcon
-import SendIcon from '@mui/icons-material/Send';
+
 
 // Constants for layout
 // HEADER_HEIGHT is now imported from Header.jsx
@@ -111,7 +111,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
 
     try {
         return getGenerativeModel(vertexAI, {
-          model: "gemini-1.5-flash", // Corrected model name
+          model: "gemini-2.0-flash", // Corrected model name
           systemInstruction: {
             parts: [{ text: systemInstructionText }]
           },

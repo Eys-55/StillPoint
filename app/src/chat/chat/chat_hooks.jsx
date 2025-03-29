@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { auth, firestore } from '../firebase.jsx';
+import { auth, firestore } from '../../firebase.jsx';
 import { doc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export const useChatHandlers = ({

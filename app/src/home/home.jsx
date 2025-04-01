@@ -87,7 +87,7 @@ function Home() {
           sx={{
             p: { xs: 2, md: 4 },
             mb: 3,
-            borderRadius: 4, // Rounded corners
+            borderRadius: 2, // Reduced borderRadius
             // bgcolor: 'primary.light', // Optional: Lighter background for paper
             // color: 'primary.contrastText' // Optional: Ensure text contrasts
           }}
@@ -103,7 +103,7 @@ function Home() {
         {questionnaireCompleted === false && (
           <Alert
             severity="info" // Changed from warning for a softer tone
-            sx={{ mb: 3, borderRadius: 2 }} // Rounded alert
+            sx={{ mb: 3, borderRadius: 1.5 }} // Reduced borderRadius
             icon={<PsychologyIcon fontSize="inherit" />}
             action={
               <Button
@@ -111,12 +111,12 @@ function Home() {
                 size="small"
                 variant="contained" // Make it stand out slightly more
                 disableElevation
-                startIcon={<DescriptionIcon />}
-                onClick={() => navigate('/get-started')}
-                sx={{ borderRadius: 5 }} // Rounded button
-              >
-                Get Started
-              </Button>
+                 startIcon={<DescriptionIcon />}
+                 onClick={() => navigate('/get-started')}
+                 sx={{ borderRadius: 3 }} // Reduced borderRadius
+               >
+                 Get Started
+               </Button>
             }
           >
             Complete your initial questionnaire to personalize your experience and unlock all features.
@@ -127,13 +127,13 @@ function Home() {
           <Tracker />
 
           <Paper
-            elevation={2}
-            sx={{
-              p: 3, // Increased padding
-              borderRadius: 4 // Rounded corners
-            }}
-          >
-             <Typography variant="h6" gutterBottom sx={{ fontWeight: 'medium', textAlign: 'center' }}>
+             elevation={2}
+             sx={{
+               p: 3, // Increased padding
+               borderRadius: 2 // Reduced borderRadius
+             }}
+           >
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'medium', textAlign: 'center' }}>
                Quick Actions
              </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
@@ -141,22 +141,22 @@ function Home() {
                 variant="contained"
                 color="primary"
                 startIcon={<ChatIcon />}
-                onClick={() => handleNavigation('/chat')}
-                disabled={questionnaireCompleted === false}
-                sx={{ flexGrow: 1, borderRadius: 5, py: 1.5 }} // Rounded & slightly taller
-              >
-                Chat with Aura
-              </Button>
+                 onClick={() => handleNavigation('/chat')}
+                 disabled={questionnaireCompleted === false}
+                 sx={{ flexGrow: 1, borderRadius: 3, py: 1.5 }} // Reduced borderRadius & slightly taller
+               >
+                 Chat with Aura
+               </Button>
               <Button
                 variant="outlined"
                 color="secondary" // Keep secondary, outline is less prominent
                 startIcon={<AccountCircleIcon />}
-                onClick={() => handleNavigation('/profile')}
-                disabled={questionnaireCompleted === false}
-                sx={{ flexGrow: 1, borderRadius: 5, py: 1.5 }} // Rounded & slightly taller
-              >
-                Profile & Insights
-              </Button>
+                 onClick={() => handleNavigation('/profile')}
+                 disabled={questionnaireCompleted === false}
+                 sx={{ flexGrow: 1, borderRadius: 3, py: 1.5 }} // Reduced borderRadius & slightly taller
+               >
+                 Profile & Insights
+               </Button>
             </Stack>
           </Paper>
         </Stack>

@@ -80,8 +80,22 @@ function App() {
       createTheme({
         palette: {
           mode: darkMode ? 'dark' : 'light',
-          // primary: { main: darkMode ? '#90caf9' : '#1976d2' },
-          // secondary: { main: darkMode ? '#f48fb1' : '#dc004e' },
+          primary: {
+            // Using --light-brand-opposite for light mode primary, and a slightly adjusted version for dark
+            main: darkMode ? '#8ac0e8' : '#70ade0', // Example: Lighter blue for dark mode primary
+          },
+          secondary: {
+             // Using --light-brand for secondary
+            main: darkMode ? '#e58a6f' : '#db714f', // Example: Lighter orange for dark mode secondary
+          },
+          background: {
+            default: darkMode ? '#262624' : '#faf9f5', // --dark-background : --light-background
+            paper: darkMode ? '#30302e' : '#f7f6f2',   // --dark-textbox : --light-textbox
+          },
+          text: {
+            primary: darkMode ? '#ffffff' : '#000000', // --text-on-dark : --text-on-light (Simplified)
+            secondary: darkMode ? '#c2c0b6' : '#6e6e6e', // --dark-text : --light-text
+          },
         },
          // Apply consistent shape globally if desired
          shape: {
@@ -149,7 +163,7 @@ function App() {
       <ErrorBoundary>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/get-started" element={<LandingPage />} /> {/* Changed path */}
           <Route path="/login" element={<Login />} />
 
           {/* Protected Routes Wrapper */}
@@ -180,7 +194,7 @@ function App() {
 
           {/* Fallback Route */}
           {/* If logged in, redirect unknown paths to home. If not logged in, redirect to landing. */}
-          <Route path="*" element={<Navigate to={user ? "/home" : "/"} replace />} />
+          <Route path="*" element={<Navigate to={user ? "/home" : "/get-started"} replace />} /> {/* Changed fallback for unauthenticated */}
 
         </Routes>
         {/* Conditionally render Footer */}

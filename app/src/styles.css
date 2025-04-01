@@ -1,0 +1,63 @@
+/* styles.css */
+
+/* Ensure box-sizing includes padding and border */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Force vertical scrollbar to always be visible to prevent layout shifts */
+body {
+  overflow-y: scroll;
+  margin: 0; /* Ensure no default body margin interferes */
+  padding: 0; /* Ensure no default body padding interferes */
+  /* Let ThemeProvider handle background color for MUI components,
+     but set base background using CSS vars for non-MUI or root elements */
+  background-color: var(--light-background); /* Default to light */
+  color: var(--light-text); /* Default text color */
+}
+
+/* Apply dark mode colors when the data attribute is present */
+body[data-bs-theme="dark"] {
+   background-color: var(--dark-background);
+   color: var(--dark-text);
+}
+
+
+:root {
+  /* Light Mode Colors */
+  --light-background: #faf9f5;
+  --light-textbox: #f7f6f2;    /* Use for cards, text inputs etc. on light background */
+  --light-text: #6e6e6e;
+
+  --main-brand: #db714f;       /* Primary brand color (logo, accents) */
+  --main-brand-opposite: #70ade0; /* Contrasting/secondary brand color */
+
+  /* Dark Mode Colors */
+  --dark-background: #262624;
+  --dark-textbox: #30302e;     /* Use for cards, text inputs etc. on dark background */
+  --dark-text: #c2c0b6;
+  /* Dark mode often uses lightened versions of brand colors or opposites */
+  /* Let's keep the light mode brand colors for reference, but they might need adjustment for dark theme */
+  /* --dark-brand-primary: #e58a6f; /* Example: Lighter version of light-brand */
+  /* --dark-brand-secondary: #8ac0e8; /* Example: Lighter version of light-brand-opposite */
+
+  /* Define text colors for specific backgrounds if needed */
+  --text-on-dark: #ffffff; /* White text on dark backgrounds */
+  --text-on-light: #000000; /* Black text on light backgrounds */
+}
+
+/* You can add other global styles here */
+
+/* Example: Style links globally if needed */
+/*
+a {
+  color: inherit; // Or set a specific theme color
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+*/

@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase.jsx';
 import {
   Container,
   Typography,
@@ -25,20 +27,22 @@ import GitHubIcon from '@mui/icons-material/GitHub'; // GitHub Icon
 // Use a theme similar to Login for consistency, assuming dark mode preference
 const landingTheme = createTheme({
   palette: {
-    mode: 'dark',
+    mode: 'dark', // Keep mode dark for landing page regardless of system
     primary: {
-      main: '#90caf9', // Light blue primary
+      // Use the hex value for --light-brand-opposite
+      main: '#70ade0', // Use the requested blue
     },
     secondary: {
-      main: '#f48fb1', // Pink secondary for emphasis maybe
+      // Use the hex value for --light-brand, potentially lightened for dark bg
+      main: '#e58a6f', // Example: Lighter orange (#db714f -> #e58a6f)
     },
     background: {
-      default: '#121212', // Very dark grey
-      paper: '#1e1e1e',   // Slightly lighter dark grey
+      default: '#262624', // Hex for --dark-background
+      paper: '#30302e',   // Hex for --dark-textbox
     },
     text: {
-      primary: '#ffffff',
-      secondary: '#b0b0b0',
+      primary: '#ffffff', // Hex for --text-on-dark
+      secondary: '#c2c0b6', // Hex for --dark-text
     }
   },
   typography: {
@@ -114,9 +118,11 @@ const landingTheme = createTheme({
 // Updated Feature Card to allow more content and structure
 const FeatureCard = ({ icon, title, description, children }) => (
   <Grid item xs={12} md={4}>
-    <Paper elevation={4} sx={{ background: 'rgba(255, 255, 255, 0.05)' }}>
+    {/* Paper background will be handled by theme's palette.background.paper */}
+    <Paper elevation={4}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Icon component={icon} sx={{ fontSize: 40, mr: 2, color: 'primary.main' }} />
+         {/* Use theme's secondary color for icon (matches --light-brand, lightened) */}
+        <Icon component={icon} sx={{ fontSize: 40, mr: 2, color: 'secondary.main' }} />
         <Typography variant="h4" component="h3">{title}</Typography>
       </Box>
       <Typography variant="body1" color="text.secondary" sx={{ flexGrow: 1 }}>{description}</Typography>
@@ -127,24 +133,35 @@ const FeatureCard = ({ icon, title, description, children }) => (
 
 function LandingPage() {
   const navigate = useNavigate();
+  const [user, loading] = useAuthState(auth);
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/home');
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <ThemeProvider theme={landingTheme}>
+        <CssBaseline />
+        <Container maxWidth="lg" sx={{ textAlign: 'center', py: { xs: 3, md: 5 } }}>
+          <Typography variant="h4">Loading...</Typography>
+        </Container>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={landingTheme}>
       <CssBaseline />
-       <AppBar position="static" elevation={0} sx={{ mb: 4 }}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            Aura Companion
-          </Typography>
-          <Button color="inherit" onClick={() => navigate('/login')} sx={{ mr: 1 }}>Sign In</Button>
-          <Button variant="outlined" color="primary" onClick={() => navigate('/login')}>Sign Up</Button>
-        </Toolbar>
-      </AppBar>
+
 
       <Container maxWidth="lg" sx={{ textAlign: 'center', py: { xs: 3, md: 5 } }}>
         {/* Hero Section */}
         <Box sx={{ my: { xs: 4, md: 6 } }}>
-          <Typography variant="h1" component="h1" gutterBottom sx={{ color: 'primary.main' }}>
+           {/* Use theme's secondary color for title */}
+          <Typography variant="h1" component="h1" gutterBottom sx={{ color: 'secondary.main' }}>
             Meet Aura: The AI That Learns You
           </Typography>
           <Typography variant="h5" color="text.secondary" sx={{ mb: 4, maxWidth: '750px', mx: 'auto' }}>
@@ -191,7 +208,7 @@ function LandingPage() {
                      color="secondary"
                      size="small"
                      startIcon={<GitHubIcon />}
-                     // href="YOUR_GITHUB_REPO_LINK" // Add your repo link here!
+                     href="https://github.com/AceCanacan/mental-health-app" // Add your repo link here!
                      target="_blank"
                      rel="noopener noreferrer"
                      sx={{ mt: 2 }}
@@ -209,12 +226,12 @@ function LandingPage() {
             Your Privacy, Our Priority
           </Typography>
            <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: '800px', mx: 'auto' }}>
-            Built on Google's secure cloud (Firebase & Vertex AI), your conversations and data are encrypted and protected. We require email verification and provide clear controls. Being open source means you can verify our commitment to your privacy. Review our <MuiLink href="/privacy" onClick={(e) => { e.preventDefault(); navigate('/privacy'); }} color="primary" sx={{ fontWeight: 'bold' }}>Privacy Policy</MuiLink>.
+             Built on Google's secure cloud (Firebase & Vertex AI), your conversations and data are encrypted and protected. We require email verification and provide clear controls. Being open source means you can verify our commitment to your privacy. Review our <MuiLink href="/privacy" onClick={(e) => { e.preventDefault(); navigate('/privacy'); }} color="primary" sx={{ fontWeight: 'bold' }}>Privacy Policy</MuiLink>.
           </Typography>
-           <Icon component={LockIcon} sx={{ fontSize: 60, color: 'primary.main', my: 2 }} />
+           {/* Use theme's secondary color for icon */}
+           <Icon component={LockIcon} sx={{ fontSize: 60, color: 'secondary.main', my: 2 }} />
         </Box>
 
-        {/* Call to Action Footer */}
         <Box sx={{ my: 5 }}>
           <Typography variant="h4" sx={{ mb: 3 }}>
             Ready to experience the difference?
@@ -225,7 +242,7 @@ function LandingPage() {
             size="large"
             onClick={() => navigate('/login')}
           >
-            Sign Up / Sign In
+            Get Started
           </Button>
            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
             Join the first open-source AI reflection community.
@@ -235,7 +252,8 @@ function LandingPage() {
       </Container>
 
        {/* Simple Footer */}
-       <Box component="footer" sx={{ py: 4, mt: 'auto', backgroundColor: 'rgba(255, 255, 255, 0.03)' }}>
+       {/* Let theme handle background, maybe add slight border or different shade if needed */}
+       <Box component="footer" sx={{ py: 4, mt: 'auto', backgroundColor: 'background.paper' /* Use paper background from theme */ }}>
         <Container maxWidth="lg">
           <Typography variant="body2" color="text.secondary" align="center">
             {'© '}

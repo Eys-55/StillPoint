@@ -59,7 +59,17 @@ function Header({ mode = 'chat', onToggleSidebar, onSummarize, onBack, darkMode,
 
   return (
     // Use position="fixed" to keep it at the top
-    <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, height: `${HEADER_HEIGHT}px` }} elevation={1}>
+    // Set background color: white for light mode, default for dark mode
+    <AppBar
+        position="fixed"
+        sx={{
+            zIndex: (theme) => theme.zIndex.drawer + 1,
+            height: `${HEADER_HEIGHT}px`,
+            bgcolor: theme.palette.mode === 'light' ? '#ffffff' : undefined, // White for light mode
+            color: theme.palette.mode === 'light' ? theme.palette.text.primary : undefined // Ensure text color contrasts in light mode
+        }}
+        elevation={1}
+    >
       <Toolbar sx={{ justifyContent: 'space-between', minHeight: `${HEADER_HEIGHT}px !important` /* Override minHeight */ }}>
         {/* Left Section */}
         <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>

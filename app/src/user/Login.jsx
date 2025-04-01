@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth } from '../firebase.jsx';
 import {
   signInWithEmailAndPassword,
@@ -6,6 +6,7 @@ import {
   sendEmailVerification // Import sendEmailVerification
 } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { useAuthState } from 'react-firebase-hooks/auth'; // Import useAuthState
 import { Container, Card, CardContent, Button, Typography, Box, CssBaseline, Alert, Stack, Divider, TextField, CircularProgress, Link } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 // Removed GoogleIcon and FacebookIcon imports
@@ -13,54 +14,64 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 // Define a theme, you might want to sync this with your app's main theme
 const theme = createTheme({
   palette: {
-    mode: 'dark', // Or 'light' depending on your preference
+    mode: 'dark', // Keep login page dark themed
     primary: {
-      main: '#90caf9', // Example primary color
+      // Use the hex value for --main-brand-opposite, potentially lightened for dark bg
+      // Note: LandingPage uses #70ade0 directly. Let's use the lighter version consistent with App.jsx dark mode
+      main: '#8ac0e8', // Lighter blue for dark mode primary (matches App.jsx dark primary)
+    },
+    secondary: {
+       // Use the hex value for --main-brand, potentially lightened for dark bg
+       main: '#e58a6f', // Lighter orange for dark mode secondary (matches App.jsx dark secondary)
     },
     background: {
-      default: '#121212', // Dark background
-      paper: '#1e1e1e',   // Slightly lighter dark for card
+      default: '#262624', // Hex for --dark-background
+      paper: '#30302e',   // Hex for --dark-textbox
     },
+    text: {
+        primary: '#ffffff', // Hex for --text-on-dark
+        secondary: '#c2c0b6', // Hex for --dark-text
+    }
   },
   typography: {
     button: {
       textTransform: 'none', // Keep button text case as defined
-    }
-  },
-  shape: {
-    borderRadius: 16, // Default border radius for components like Button, Card, TextField
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 50, // More rounded buttons
-        },
-      },
-    },
-    MuiTextField: {
-        styleOverrides: {
-            root: {
-                '& .MuiOutlinedInput-root': {
-                    borderRadius: 50, // More rounded text fields
-                },
-            },
-        },
-    },
-    MuiCard: {
-        styleOverrides: {
-            root: {
-                borderRadius: 20, // More rounded cards
-            }
-        }
-    },
-    MuiAlert: {
-        styleOverrides: {
-            root: {
-                borderRadius: 12, // Slightly rounded alerts
-            }
-        }
-    }
+     }
+   },
+   shape: {
+     borderRadius: 8, // Reduced default border radius
+   },
+   components: {
+     MuiButton: {
+       styleOverrides: {
+         root: {
+           borderRadius: 8, // Reduced button border radius
+         },
+       },
+     },
+     MuiTextField: {
+         styleOverrides: {
+             root: {
+                 '& .MuiOutlinedInput-root': {
+                     borderRadius: 8, // Reduced text field border radius
+                 },
+             },
+         },
+     },
+     MuiCard: {
+         styleOverrides: {
+             root: {
+                 borderRadius: 8, // Reduced card border radius
+             }
+         }
+     },
+     MuiAlert: {
+         styleOverrides: {
+             root: {
+                 borderRadius: 8, // Reduced alert border radius
+             }
+         }
+     }
   }
 });
 
@@ -71,6 +82,15 @@ function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const [user, authLoading] = useAuthState(auth); // Use auth state hook
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      console.log("User already logged in, redirecting to /home from Login page.");
+      navigate('/home', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
 
   const handleAuthError = (err) => {
     console.error("Authentication error:", err);
@@ -118,7 +138,7 @@ function Login() {
       }
 
       console.log("Email verified, navigating home.");
-      navigate('/'); // Navigate only if email is verified
+      navigate('/home'); // Navigate to home page after successful login
 
     } catch (err) {
       handleAuthError(err);
@@ -177,7 +197,7 @@ function Login() {
           position: 'relative', // Needed for loading overlay positioning
           overflow: 'hidden' // Hide overflow from loading indicator
         }}>
-          {loading && ( // Central loading indicator overlay
+          {(loading || authLoading) && ( // Show overlay if either action loading OR initial auth check is loading
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.6)', zIndex: 10, borderRadius: 'inherit' }}>
               <CircularProgress color="primary"/>
             </Box>
@@ -214,7 +234,7 @@ function Login() {
                 autoFocus
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
+                disabled={loading || authLoading} // Disable during initial auth check too
                 // borderRadius applied via theme
               />
               <TextField
@@ -228,27 +248,27 @@ function Login() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
+                disabled={loading || authLoading} // Disable during initial auth check too
                  // borderRadius applied via theme
               />
               <Stack direction="row" spacing={2} sx={{ mt: 3, mb: 2 }}>
                   <Button
                    type="submit" // Changed from button type
-                   fullWidth
-                   variant="contained"
-                   onClick={handleEmailLogin} // Attach handler
-                   disabled={loading || !email || !password}
-                   sx={{ py: 1.5 /* borderRadius applied via theme */ }}
+                    fullWidth
+                    variant="contained"
+                    onClick={handleEmailLogin} // Attach handler
+                    disabled={loading || authLoading || !email || !password} // Disable during initial auth check too
+                    sx={{ py: 1.5 /* borderRadius applied via theme */ }}
                   >
                   Sign In
                  </Button>
                   <Button
                    type="button" // Keep as button type
-                   fullWidth
-                   variant="outlined"
-                   onClick={handleEmailSignUp} // Attach handler
-                   disabled={loading || !email || !password}
-                   sx={{ py: 1.5 /* borderRadius applied via theme */ }}
+                    fullWidth
+                    variant="outlined"
+                    onClick={handleEmailSignUp} // Attach handler
+                    disabled={loading || authLoading || !email || !password} // Disable during initial auth check too
+                    sx={{ py: 1.5 /* borderRadius applied via theme */ }}
                  >
                   Sign Up
                  </Button>

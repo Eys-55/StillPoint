@@ -311,7 +311,8 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
         }}
       >
          {/* Message Display Area (Scrollable) */}
-        <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+        {/* Added maxWidth and mx: 'auto' */}
+        <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2, maxWidth: '1000px', width: '100%', mx: 'auto' }}>
           {conversationLoading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
               <CircularProgress />
@@ -335,7 +336,10 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
                     sx={{
                       p: 1.5,
                       borderRadius: msg.role === 'user' ? '20px 20px 5px 20px' : '20px 20px 20px 5px',
-                      bgcolor: msg.role === 'user' ? 'primary.main' : 'background.paper',
+                      // Use lighter blue for user messages in light mode, keep dark mode primary as is
+                      bgcolor: msg.role === 'user'
+                        ? (theme.palette.mode === 'light' ? '#8ac0e8' : theme.palette.primary.main)
+                        : 'background.paper',
                       color: msg.role === 'user' ? 'primary.contrastText' : 'text.primary',
                       maxWidth: '85%',
                       wordWrap: 'break-word',
@@ -364,8 +368,8 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
       </Box>
 
       {/* Input Area fixed at bottom (above footer) */}
-       <Paper
-         elevation={3}
+       {/* Replaced Paper with Box, removed elevation */}
+       <Box
          sx={{
            position: 'fixed',
            bottom: `${FOOTER_HEIGHT}px`, // Position above Footer
@@ -376,12 +380,15 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
            bgcolor: 'background.paper',
            display: 'flex',
            alignItems: 'flex-start',
+           // The outer Box still spans full width for the background
          }}
        >
-         <form onSubmit={handleSubmit} style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-           <TextField
-             multiline
-             fullWidth
+         {/* Inner Box to constrain and center the form */}
+         <Box sx={{ maxWidth: '1000px', width: '100%', mx: 'auto', display: 'flex' }}>
+           <form onSubmit={handleSubmit} style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+             <TextField
+               multiline
+               fullWidth
              variant="outlined"
              placeholder={"Type your message..."}
              value={loading ? "Thinking..." : (isRecording ? `Recording: ${recordingTime}s...` : input)}
@@ -419,8 +426,8 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
              </IconButton>
            </Stack>
          </form>
-       </Paper>
-      {/* </Box> */} {/* Removed the closing tag from previous change */}
+        </Box> {/* Close the inner centering Box */}
+       </Box> {/* Close the outer fixed Box */}
 
       {/* Summarization Loading Overlay */}
       <Fade in={isSummarizing} timeout={300}>

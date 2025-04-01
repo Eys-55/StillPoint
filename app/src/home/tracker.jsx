@@ -124,7 +124,7 @@ function Tracker() {
             p: { xs: 1.5, sm: 2 }, // Slightly adjust padding
             mt: 0, // Remove default margin top if spacing handled by Stack
             mb: 0, // Remove default margin bottom if spacing handled by Stack
-            borderRadius: 4, // Rounded corners
+            borderRadius: 2, // Reduced borderRadius
             overflow: 'hidden' // Ensure content respects border radius
         }}
     >

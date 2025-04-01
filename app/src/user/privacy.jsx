@@ -8,11 +8,11 @@ function Privacy() {
   return (
     // Use Box for full height and centering if needed, or just Container
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)', /* Adjust 64px based on potential header height */ bgcolor: 'background.default', py: 4 }}>
-       <Container component="main" maxWidth="md" sx={{ flexGrow: 1 }}>
-        <Paper sx={{ p: { xs: 2, sm: 3, md: 4 }, borderRadius: 4, boxShadow: 3 }}>
-          <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'medium', mb: 3 }}>
-            Privacy Policy
-          </Typography>
+        <Container component="main" maxWidth="md" sx={{ flexGrow: 1 }}>
+         <Paper sx={{ p: { xs: 2, sm: 3, md: 4 }, borderRadius: 2, boxShadow: 3 }}> {/* Reduced borderRadius */}
+           <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'medium', mb: 3 }}>
+             Privacy Policy
+           </Typography>
           <Typography variant="body1" paragraph color="text.secondary">
             Last Updated: {new Date().toLocaleDateString()} {/* Example: Add last updated date */}
           </Typography>

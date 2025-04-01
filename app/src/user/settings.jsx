@@ -117,19 +117,19 @@ function Settings({ darkMode, setDarkMode }) {
   const paperStyle = {
     mb: 3,
     p: 3,
-    borderRadius: 4, // Rounded corners for Paper components
+    borderRadius: 2, // Reduced borderRadius for Paper components
     boxShadow: 2 // Consistent elevation/shadow
   };
 
   const textFieldStyle = {
     mb: 2,
     '& .MuiOutlinedInput-root': {
-      borderRadius: 50, // Make TextField rounded
+      borderRadius: 2, // Reduced borderRadius for TextField
     },
   };
 
   const buttonStyle = {
-    borderRadius: 50, // Make button rounded
+    borderRadius: 2, // Reduced borderRadius for button
     py: 1.2, // Adjust padding for better look
     px: 3
   };
@@ -142,13 +142,13 @@ function Settings({ darkMode, setDarkMode }) {
       {/* Add bottom margin (mb) to account for fixed Footer height + buffer */}
       <Container component="main" maxWidth="md" sx={{ /* mt: 4, removed */ mb: `${FOOTER_HEIGHT + 16}px`, flexGrow: 1 }}>
         <Typography variant="h4" gutterBottom sx={{ mb: 3, fontWeight: 'medium' }}>
-          Settings
-        </Typography>
+           Settings
+         </Typography>
 
-      {message && <Alert severity={messageType} sx={{ mb: 3, borderRadius: 2 }} onClose={() => setMessage('')}>{message}</Alert>}
+       {message && <Alert severity={messageType} sx={{ mb: 3, borderRadius: 1.5 }} onClose={() => setMessage('')}>{message}</Alert>} {/* Reduced borderRadius */}
 
-      {/* Profile Information Section */}
-      <Paper sx={paperStyle}>
+       {/* Profile Information Section */}
+       <Paper sx={paperStyle}>
         <Typography variant="h6" gutterBottom>Profile Information</Typography>
         <Box component="form" onSubmit={handleSave} sx={{ mt: 2 }}>
           <TextField

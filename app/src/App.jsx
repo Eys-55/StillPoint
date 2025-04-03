@@ -5,7 +5,7 @@ import Home from './home/home.jsx';
 import { auth } from './firebase.jsx';
 import { signOut } from 'firebase/auth';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import Chat from './chat/chat/Chat.jsx';
+import Chat from './chat/chat/view/Chat.jsx';
 import LandingPage from './landing/LandingPage.jsx'; // Import LandingPage
 
 import UserProfile from './profile/user_profile.jsx';

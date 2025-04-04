@@ -41,10 +41,13 @@ function ChatInterface({
         return "Type your message or use the mic...";
     };
 
-    const isInputDisabled = loading || isRecording || transcribing || conversationLoading || !chatSessionReady;
+    // Input should only be disabled during active operations, not just because no chat is selected or ready.
+    // The model readiness check happens in handleSubmit.
+    const isInputDisabled = loading || isRecording || transcribing || conversationLoading;
     const isSendDisabled = isInputDisabled || !input.trim();
-    const isMicDisabled = loading || conversationLoading || transcribing; // Allow recording even if chat session isn't ready? Maybe not. Let's disable if input is disabled.
-    // const isMicDisabled = isInputDisabled; // Simpler: disable mic whenever input is disabled.
+    // Mic should only be disabled if an action prevents starting it (loading, transcribing). Recording state is handled by the button itself (Stop vs Mic icon).
+    const isMicDisabled = loading || conversationLoading || transcribing;
+
 
     return (
         <>

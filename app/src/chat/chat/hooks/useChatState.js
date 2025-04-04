@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { app, auth, firestore } from '../../../firebase.jsx';
 import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
-import * as prompts from '../../../meta/prompts.js';
+import prompts from '../../../meta/prompts.js'; // Changed import to handle default export correctly
 import { questions } from '../../../meta/questions.js';
 import { doc, getDoc, setDoc, updateDoc, collection, query, getDocs, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
@@ -101,15 +101,29 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
     // Initialize AI Model when dependencies are ready
     const model = useMemo(() => {
         if (!bundledSummaries || !userProfile) {
-            console.log("AI Model dependencies (summaries, profile) not ready yet.");
             return null;
         }
         const systemInstructionText = `${prompts.system}\n\n${bundledSummaries}\n\n${prompts.userProfileLabel}\n${userProfile}`;
-        console.log("Initializing AI model...");
+
+        /*
+        // --- !!! VERIFICATION LOG: COMPLETE SYSTEM INSTRUCTION !!! ---
+        // This log shows the *entire* text passed to the AI model's systemInstruction parameter.
+        // It includes the base system prompt, fetched summaries, and user profile data.
+        console.log("======================================================");
+        console.log("=== START: FULL SYSTEM INSTRUCTION FOR GEMINI MODEL ===");
+        console.log("======================================================");
+        console.log(systemInstructionText);
+        console.log("======================================================");
+        console.log("=== END: FULL SYSTEM INSTRUCTION FOR GEMINI MODEL ===");
+        console.log("======================================================");
+        // --- End VERIFICATION LOG ---
+        */
+
+        console.log("Initializing AI model (gemini-2.0-flash)..."); // Added model name for clarity
         try {
             return getGenerativeModel(vertexAI, {
-                model: "gemini-1.5-flash",
-                systemInstruction: { parts: [{ text: systemInstructionText }] },
+                model: "gemini-2.0-flash", // Restore model name parameter
+                systemInstruction: { parts: [{ text: systemInstructionText }] }, // Restore system instruction parameter
             });
         } catch (error) {
             console.error("Error initializing Generative Model:", error);
@@ -170,11 +184,19 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
                 }
 
                 const formattedHistory = validatedHistory.map(msg => ({
-                    role: msg.role === 'user' ? 'user' : 'model',
+                    role: msg.role === 'user' ? 'user' : 'model', // Correctly map role
                     parts: [{ text: msg.text }],
                 }));
 
                 console.log("Starting chat session with history:", formattedHistory);
+                // Ensure model is ready before starting chat
+                if (!model) {
+                     console.error("Model not ready when trying to start chat session in useEffect.");
+                     // Handle this case appropriately, maybe set an error state or return
+                     setMessages([{ role: 'bot', text: "Error: AI Model initialization failed." }]);
+                     setConversationLoading(false);
+                     return;
+                }
                 chatSession.current = model.startChat({
                     history: formattedHistory,
                     generationConfig: { maxOutputTokens: 1000 },
@@ -198,7 +220,15 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
     const handleSubmit = useCallback(async (e) => {
         if (e) e.preventDefault(); // Allow calling without event object
         const currentInput = input.trim();
-        if (!currentInput || loading || !model) return; // Prevent sending if loading or model not ready
+
+        // Ensure model is ready and input is not empty, regardless of activeConversationId
+        if (!model) {
+             console.error("Model not ready. Cannot send message.");
+             // Optionally show an alert or message to the user
+             // alert("AI Model is not ready yet. Please wait a moment.");
+             return; // Stop execution if model isn't ready
+        }
+        if (!currentInput || loading) return; // Prevent sending if loading or input is empty
 
         setInput('');
         setLoading(true); // Start loading for AI response
@@ -227,6 +257,14 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
                 conversationId = docRef.id;
                 setActiveConversationId(conversationId); // Set the new ID as active
                 // Start chat session for the new conversation
+                // Ensure model is initialized before starting chat
+                if (!model) {
+                    console.error("Model not initialized when trying to start new chat session.");
+                    setMessages([{ role: 'bot', text: "Error: AI Model not ready." }]);
+                    setLoading(false);
+                    // Potentially remove the newly created conversation doc if it's unusable? Or handle retry?
+                    return;
+                }
                 chatSession.current = model.startChat({
                     history: [{ role: 'user', parts: [{ text: currentInput }] }], // History starts with the user message
                     generationConfig: { maxOutputTokens: 1000 },

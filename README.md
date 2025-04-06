@@ -1,4 +1,4 @@
-<img src="https://github.com/user-attachments/assets/d9dae5fa-7faf-4f7e-a446-ad1506e43fee" alt="StillPoint Logo" width="500" height="500" />
+<img src="https://github.com/user-attachments/assets/d9dae5fa-7faf-4f7e-a446-ad1506e43fee" alt="StillPoint Logo" width="300" height="300" />
 
 StillPoint is an open-source mental health companion app designed to provide a private, personalized space for reflection and growth. It features an AI, powered by Google's Gemini models via Vertex AI, that learns and adapts to you over time through conversation and user-provided insights. Our goal is to create a supportive, non-judgmental partner for your self-discovery journey.
 

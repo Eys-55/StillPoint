@@ -123,7 +123,7 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
         console.log("Initializing AI model (gemini-2.0-flash)..."); // Added model name for clarity
         try {
             return getGenerativeModel(vertexAI, {
-                model: "gemini-2.0-flash", // Restore model name parameter
+                model: "gemini-2.0-flash-thinking-exp-01-21", // Restore model name parameter
                 systemInstruction: { parts: [{ text: systemInstructionText }] }, // Restore system instruction parameter
             });
         } catch (error) {

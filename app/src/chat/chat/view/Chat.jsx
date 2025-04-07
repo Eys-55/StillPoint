@@ -29,7 +29,9 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
         handleSummarizeHeader,
         // handleEndConversationProfile, // Not directly used here, triggered by Header/Sidebar? Let's keep it simple for now.
         conversationDocRef, // Needed for updating summarizedAt
-        updateLastSavedTime // Function to update save time state
+        updateLastSavedTime, // Function to update save time state
+        isTemporaryChat, // Get temporary chat state
+        setIsTemporaryChat // Get setter for temporary chat state
     } = useChatState(activeConversationId, setActiveConversationId);
 
     const {
@@ -73,6 +75,8 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
                 hasNewMessages={hasNewMessages}
                 hasMessages={messages.length > 0}
                 isSummarizing={isSummarizing} // Pass summarizing state to header if needed
+                isTemporaryChat={isTemporaryChat} // Pass temporary state
+                onToggleTemporaryChat={() => setIsTemporaryChat(prev => !prev)} // Pass toggle handler
             />
 
             <Sidebar
@@ -98,6 +102,7 @@ function Chat({ darkMode, setDarkMode, activeConversationId, setActiveConversati
                     transcribing={transcribing}
                     activeConversationId={activeConversationId}
                     chatSessionReady={chatSessionReady} // Pass readiness state
+                    isTemporaryChat={isTemporaryChat} // Pass temporary state
                 />
 
                 {/* Summarization Loading Overlay */}

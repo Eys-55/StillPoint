@@ -21,7 +21,8 @@ function ChatInterface({
     recordingTime,
     transcribing,
     activeConversationId,
-    chatSessionReady // Boolean indicating if chatSession.current is initialized
+    chatSessionReady, // Boolean indicating if chatSession.current is initialized
+    isTemporaryChat // Boolean indicating if the current mode is temporary
 }) {
     const theme = useTheme();
     const messagesEndRef = useRef(null);
@@ -36,8 +37,12 @@ function ChatInterface({
         if (loading) return "Thinking...";
         if (isRecording) return `Recording: ${recordingTime}s...`;
         if (transcribing) return "Transcribing audio...";
-        if (!chatSessionReady && activeConversationId) return "Initializing chat..."; // Indicate session loading
-        if (!activeConversationId) return "Select or start a conversation.";
+        if (!chatSessionReady && activeConversationId) return "Initializing chat..."; // Indicate session loading for existing convo
+        if (!activeConversationId && !isTemporaryChat) return "Start a new conversation..."; // New regular chat state
+        if (!activeConversationId && isTemporaryChat) return "Start a temporary chat..."; // New temporary chat state
+        // If activeConversationId exists, but chatSession isn't ready yet (less common)
+        if (activeConversationId && !chatSessionReady) return "Initializing chat...";
+        // Default for active, ready conversation
         return "Type your message or use the mic...";
     };
 
@@ -71,7 +76,11 @@ function ChatInterface({
                         </Box>
                     ) : messages.length === 0 && !loading ? (
                         <Typography variant="body1" color="text.secondary" align="center" sx={{ mt: 4 }}>
-                            {!activeConversationId ? "Select a conversation or start a new one." : "Start the conversation by typing a message below."}
+                            {!activeConversationId && !isTemporaryChat ? "Start typing to begin a new conversation." :
+                             !activeConversationId && isTemporaryChat ? "Start typing to begin a temporary chat. Messages won't be saved." :
+                             activeConversationId ? "Start the conversation by typing a message below." : // Should have active ID if messages loaded
+                             "Select a conversation or start a new one." // Fallback
+                            }
                         </Typography>
                     ) : (
                         <Stack spacing={2}>

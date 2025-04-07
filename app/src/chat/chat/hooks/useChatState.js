@@ -81,6 +81,7 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
     const [lastMessageCountAtSave, setLastMessageCountAtSave] = useState(null);
     const [bundledSummaries, setBundledSummaries] = useState('');
     const [userProfile, setUserProfile] = useState('');
+    const [isTemporaryChat, setIsTemporaryChat] = useState(false); // State for temporary chat mode
 
     const chatSession = useRef(null);
     const vertexAI = useMemo(() => getVertexAI(app), []);
@@ -138,8 +139,12 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
             setLastSavedTime(null);
             setLastMessageCountAtSave(null);
             chatSession.current = null; // Clear chat session if no active convo
+            setIsTemporaryChat(false); // Reset temporary chat state when changing/clearing conversation
             return;
         }
+
+        // Reset temporary state if switching TO a valid, existing conversation
+        setIsTemporaryChat(false);
 
         const loadChat = async () => {
             console.log("Loading chat for:", activeConversationId);
@@ -233,54 +238,76 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
         setInput('');
         setLoading(true); // Start loading for AI response
 
-        let conversationId = activeConversationId;
+        let conversationId = activeConversationId; // Might be null if starting new
         const userMessage = { role: 'user', text: currentInput };
-        let currentMessages = []; // To hold the state before AI call
+        let currentMessages = [...messages, userMessage]; // Start with existing + new message
+        let justCreatedConversationId = null; // Flag/ID for newly created regular chat
 
-        if (!conversationId) {
-            // New Conversation
+        setMessages(currentMessages); // Update UI immediately with user message
+
+        if (!conversationId && !isTemporaryChat) {
+            // First message of a NEW REGULAR Conversation -> Create Firestore Doc NOW
             const user = auth.currentUser;
             if (!user) { setLoading(false); return; }
 
-            currentMessages = [userMessage];
-            setMessages(currentMessages); // Update UI immediately
-
+            console.log("First message: Creating new REGULAR conversation in Firestore...");
             const conversationsRef = collection(firestore, 'users', user.uid, 'conversations');
-            const newConversation = {
-                title: "New Conversation", // Title can be updated later
-                messages: currentMessages,
+            const newConversationData = {
+                title: "New Conversation", // Will be updated later by summarizer or first message content
+                messages: currentMessages.map(({ temp, ...rest }) => rest), // Save clean messages
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp()
             };
             try {
-                const docRef = await addDoc(conversationsRef, newConversation);
-                conversationId = docRef.id;
-                setActiveConversationId(conversationId); // Set the new ID as active
-                // Start chat session for the new conversation
-                // Ensure model is initialized before starting chat
-                if (!model) {
-                    console.error("Model not initialized when trying to start new chat session.");
-                    setMessages([{ role: 'bot', text: "Error: AI Model not ready." }]);
-                    setLoading(false);
-                    // Potentially remove the newly created conversation doc if it's unusable? Or handle retry?
-                    return;
-                }
-                chatSession.current = model.startChat({
-                    history: [{ role: 'user', parts: [{ text: currentInput }] }], // History starts with the user message
-                    generationConfig: { maxOutputTokens: 1000 },
-                });
-                console.log("New conversation created and chat session started:", conversationId);
+                const docRef = await addDoc(conversationsRef, newConversationData);
+                conversationId = docRef.id; // Assign the new ID
+                justCreatedConversationId = conversationId; // Mark that we just created it
+                setActiveConversationId(conversationId); // Set the new ID as active *after* creation
+                console.log("New regular conversation created and set active:", conversationId);
             } catch (error) {
-                console.error("Error creating new conversation:", error);
-                setMessages([{ role: 'bot', text: "Error: Could not create conversation." }]);
+                console.error("Error creating new conversation on first message:", error);
+                // Revert messages state? Show error message?
+                setMessages(prev => prev.slice(0, -1)); // Remove the user message optimistically added
+                setMessages(prev => [...prev, { role: 'bot', text: "Error: Could not create conversation." }]);
                 setLoading(false);
                 return;
             }
-        } else {
-            // Existing Conversation
-            currentMessages = [...messages, userMessage];
-            setMessages(currentMessages); // Update UI
+        } else if (conversationId && !isTemporaryChat) {
+            // Subsequent message in an EXISTING REGULAR Conversation
+            console.log("Saving user message to existing regular conversation:", conversationId);
+            // Save immediately (or maybe batch with bot response later?) - Saving here is simpler
             saveMessagesToFirestore(conversationId, currentMessages).catch(err => console.error("Error saving user message:", err));
+        } else if (isTemporaryChat) {
+             // Message in a TEMPORARY Chat (new or subsequent)
+             console.log("Handling message in TEMPORARY chat (no Firestore save).");
+             // No Firestore interaction needed for user message. conversationId remains null if new.
+        } else {
+             // Should not happen
+             console.error("Unhandled case in handleSubmit message saving logic.");
+             setLoading(false);
+             return;
+        }
+
+        // --- AI Interaction ---
+        // Initialize or use existing chat session regardless of temporary status
+        if (!chatSession.current) {
+             // Ensure model is ready before starting chat
+             if (!model) {
+                 console.error("Model not ready when trying to start chat session in handleSubmit.");
+                 setMessages([{ role: 'bot', text: "Error: AI Model initialization failed." }]);
+                 setLoading(false);
+                 return;
+             }
+             console.log("Starting new chat session (temporary or first message of regular).");
+             // History for the AI should include the current user message
+             const historyForAI = currentMessages.map(msg => ({
+                 role: msg.role === 'user' ? 'user' : 'model',
+                 parts: [{ text: msg.text }],
+             }));
+             chatSession.current = model.startChat({
+                 history: historyForAI, // Start with current messages
+                 generationConfig: { maxOutputTokens: 1000 },
+             });
         }
 
         // Ensure chat session is valid before sending message
@@ -321,8 +348,15 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
                 const finalMsgs = [...prev];
                 if (finalMsgs.length > 0) {
                     finalMsgs[finalMsgs.length - 1] = finalBotMessage;
-                    // Save conversation with final bot message
-                    saveMessagesToFirestore(conversationId, finalMsgs).catch(err => console.error("Error saving final bot message:", err));
+                    // Save conversation with final bot message ONLY if not temporary AND conversationId is valid
+                    // Use 'conversationId' which might have been updated if it was just created
+                    const idToSave = justCreatedConversationId || activeConversationId;
+                    if (!isTemporaryChat && idToSave) {
+                        console.log("Saving final bot message to regular conversation:", idToSave);
+                        saveMessagesToFirestore(idToSave, finalMsgs).catch(err => console.error("Error saving final bot message:", err));
+                    } else {
+                        console.log("Skipping save for final bot message in temporary chat or if ID is missing.");
+                    }
                 }
                 return finalMsgs;
             });
@@ -332,18 +366,32 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
             const errorMessage = { role: 'bot', text: "Error: " + error.message };
             setMessages(prev => {
                 const msgsWithError = [...prev.filter(m => !m.temp), errorMessage]; // Remove temp message if it exists
-                saveMessagesToFirestore(conversationId, msgsWithError).catch(err => console.error("Error saving error message:", err));
+                // Save error message ONLY if not temporary AND conversationId is valid
+                // Use 'conversationId' which might have been updated if it was just created
+                const idToSave = justCreatedConversationId || activeConversationId;
+                if (!isTemporaryChat && idToSave) {
+                     console.log("Saving error message to regular conversation:", idToSave);
+                     saveMessagesToFirestore(idToSave, msgsWithError).catch(err => console.error("Error saving error message:", err));
+                } else {
+                     console.log("Skipping save for error message in temporary chat or if ID is missing.");
+                }
                 return msgsWithError;
             });
         } finally {
             setLoading(false);
         }
-    }, [input, activeConversationId, messages, model, chatSession, setLoading, setMessages, setInput, setActiveConversationId, bundledSummaries, userProfile]); // Dependencies
+    }, [input, activeConversationId, messages, model, chatSession, setLoading, setMessages, setInput, setActiveConversationId, bundledSummaries, userProfile, isTemporaryChat]); // Added isTemporaryChat dependency
 
 
     const handleEndConversation = useCallback(async () => {
+        if (isTemporaryChat) {
+            console.log("Attempted to summarize a temporary chat.");
+            alert("Temporary chats cannot be saved or summarized.");
+            return null;
+        }
+        // Ensure activeConversationId exists for non-temporary chats before proceeding
         if (!messages || messages.length === 0 || !activeConversationId || !model || !auth.currentUser) {
-            console.log("Cannot end conversation: Missing data", { messages: !!messages, activeConversationId, model: !!model, user: !!auth.currentUser });
+            console.log("Cannot end conversation: Missing data or not a valid regular conversation", { messages: !!messages, activeConversationId, model: !!model, user: !!auth.currentUser, isTemporaryChat });
             return null;
         }
 
@@ -382,7 +430,7 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
         } finally {
             setIsSummarizing(false);
         }
-    }, [messages, activeConversationId, model, setIsSummarizing, prompts.summarizer]); // Dependencies
+    }, [messages, activeConversationId, model, setIsSummarizing, prompts.summarizer, isTemporaryChat]); // Added isTemporaryChat dependency
 
     const handleSummarizeHeader = useCallback(async () => {
         // Simply calls handleEndConversation, which now updates state internally
@@ -418,6 +466,8 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
         updateLastSavedTime: (time, count) => { // Helper to update save time from outside if needed
              setLastSavedTime(time);
              setLastMessageCountAtSave(count);
-        }
+        },
+        isTemporaryChat, // Expose temporary chat state
+        setIsTemporaryChat // Expose setter for temporary chat state
     };
 };

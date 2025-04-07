@@ -1,9 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, IconButton, Typography, Tooltip, Box, Badge } from '@mui/material'; // Import Badge
+import { AppBar, Toolbar, IconButton, Typography, Tooltip, Box, Badge, Button } from '@mui/material'; // Import Badge and Button
 import MenuIcon from '@mui/icons-material/Menu';
 import CheckIcon from '@mui/icons-material/Check';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline'; // Import temporary chat icon
 import { useTheme } from '@mui/material/styles';
 
 // Define AppBar height for layout calculations elsewhere
@@ -13,7 +14,19 @@ export const HEADER_HEIGHT = 64; // Default MUI AppBar height
 // Consuming components/layouts MUST apply `paddingTop: HEADER_HEIGHT` (or appropriate value)
 // to their main scrollable content area to prevent content from being hidden underneath the header.
 // THIS HEADER IS NOW INTENDED PRIMARILY FOR THE CHAT VIEW.
-function Header({ mode = 'chat', onToggleSidebar, onSummarize, onBack, darkMode, conversationTitle, lastSavedTime, hasNewMessages, hasMessages }) {
+function Header({
+    mode = 'chat',
+    onToggleSidebar,
+    onSummarize,
+    onBack,
+    darkMode,
+    conversationTitle,
+    lastSavedTime,
+    hasNewMessages,
+    hasMessages,
+    isTemporaryChat, // New prop for temporary chat state
+    onToggleTemporaryChat // New prop to toggle temporary chat state
+}) {
   const navigate = useNavigate();
   const theme = useTheme();
 
@@ -103,35 +116,63 @@ function Header({ mode = 'chat', onToggleSidebar, onSummarize, onBack, darkMode,
         </Typography>
 
         {/* Right Section */}
-        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', minWidth: 48 }}>
           {showSummarizeSection && (
-            <>
-              <Tooltip title={tooltipTitle}>
-                {/* Wrap IconButton in span for Tooltip when disabled */}
-                <span style={{ cursor: !hasMessages ? 'not-allowed' : 'pointer' }}>
-                  <IconButton
-                    color="inherit"
-                    onClick={hasMessages ? onSummarize : undefined}
-                    disabled={!hasMessages}
-                    size="medium" // Standard IconButton size
-                    sx={{
-                      mr: 1, // Add some margin if needed
-                      // Change color based on save state for visual feedback
-                      color: hasMessages ? (hasNewMessages ? 'warning.main' : 'success.main') : 'action.disabled'
-                    }}
-                  >
-                    {/* Add Badge if there are new messages */}
-                    {hasNewMessages ? (
-                       <Badge color="warning" variant="dot">
-                         <CheckIcon />
-                       </Badge>
-                    ) : (
-                       <CheckIcon />
-                    )}
-                  </IconButton>
-                </span>
-              </Tooltip>
-            </>
+            isTemporaryChat ? (
+              // ALWAYS show Temporary Chat button if isTemporaryChat is true
+              <Button
+                variant="contained" // Always contained when active
+                color="primary"
+                size="small"
+                startIcon={<ChatBubbleOutlineIcon />}
+                // Disable toggling once messages exist to lock the mode
+                onClick={!hasMessages ? onToggleTemporaryChat : undefined}
+                sx={{ mr: 1, cursor: hasMessages ? 'default' : 'pointer' }} // Indicate non-clickable when locked
+              >
+                Temporary Chat
+              </Button>
+            ) : (
+              // If NOT temporary chat:
+              !hasMessages ? (
+                // Show toggleable Temporary Chat button if NO messages yet
+                <Button
+                  variant="outlined" // Outlined when inactive
+                  color="primary"
+                  size="small"
+                  startIcon={<ChatBubbleOutlineIcon />}
+                  onClick={onToggleTemporaryChat} // Allow toggling ON
+                  sx={{ mr: 1 }}
+                >
+                  Temporary Chat
+                </Button>
+              ) : (
+                // Show Save/Summarize button if NOT temporary and messages EXIST
+                <>
+                  <Tooltip title={tooltipTitle}>
+                    <span style={{ cursor: !hasMessages ? 'not-allowed' : 'pointer' }}>
+                      <IconButton
+                        color="inherit"
+                        onClick={onSummarize} // Summarize only possible for non-temporary
+                        disabled={!hasMessages} // Should always be true here
+                        size="medium"
+                        sx={{
+                          mr: 1,
+                          color: hasNewMessages ? 'warning.main' : 'success.main'
+                        }}
+                      >
+                        {hasNewMessages ? (
+                          <Badge color="warning" variant="dot">
+                            <CheckIcon />
+                          </Badge>
+                        ) : (
+                          <CheckIcon />
+                        )}
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </>
+              )
+            )
           )}
           {/* Add Spacer if no button is shown to maintain center alignment */}
            {!showSummarizeSection && <Box sx={{ width: 48 }} />} {/* Adjust width to match potential icon button */}

@@ -48,31 +48,25 @@ function Sidebar({ activeConversationId, setActiveConversationId, isSidebarColla
   }, []);
 
   // Handlers
-  const handleNewConversation = async () => {
-    // Prevent creating new if the current one is empty and unsaved
-    const currentConv = conversations.find(conv => conv.id === activeConversationId);
-    if (currentConv && currentConv.title === "New Conversation" && currentConv.messageCount === 0) {
-      console.log("Current conversation is new and empty, not creating another.");
-      setIsSidebarCollapsed(false); // Ensure sidebar is open if needed
-      return;
+  const handleNewConversation = () => {
+    // Prevent starting a new chat if already in a new, unsaved state
+    if (activeConversationId === null && conversations.length > 0) { // Check if already in 'new chat' mode
+        // Maybe add a check for isTemporaryChat here if needed?
+        console.log("Already in new chat mode.");
+        setIsSidebarCollapsed(true); // Close sidebar
+        return;
     }
+     // Or if the currently selected one is an empty "New Conversation" from Firestore (less likely now)
+     const currentConv = conversations.find(conv => conv.id === activeConversationId);
+     if (currentConv && currentConv.title === "New Conversation" && currentConv.messageCount === 0) {
+       console.log("Current conversation is new and empty, switching to new chat mode.");
+       // Allow switching to the generic 'new chat' mode
+     }
 
-    const user = auth.currentUser;
-    if (!user) return;
-    const convRef = collection(firestore, 'users', user.uid, 'conversations');
-    const newConv = {
-      title: "New Conversation", // Temporary title
-      messages: [],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    };
-    try {
-      const docRef = await addDoc(convRef, newConv);
-      setActiveConversationId(docRef.id); // Switch to the new conversation
-      setIsSidebarCollapsed(false); // Keep sidebar open
-    } catch (error) {
-      console.error("Error creating new conversation:", error);
-    }
+    console.log("Setting up for new conversation (activeId: null)");
+    setActiveConversationId(null); // Clear active ID to indicate new chat state
+    // Note: isTemporaryChat state is handled in Chat.jsx/useChatState
+    setIsSidebarCollapsed(true); // Close sidebar after clicking '+'
   };
 
   const handleDeleteConversation = async () => {
@@ -98,8 +92,8 @@ function Sidebar({ activeConversationId, setActiveConversationId, isSidebarColla
 
   const handleConversationClick = (id) => {
     setActiveConversationId(id);
-    // Consider closing sidebar on mobile/smaller screens after selection
-    // setIsSidebarCollapsed(true); // Or based on screen size
+    // Close sidebar after selecting a conversation
+    setIsSidebarCollapsed(true);
   };
 
   const handleMenuOpen = (event, conv) => {

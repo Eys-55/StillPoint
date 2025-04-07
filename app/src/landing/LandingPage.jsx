@@ -23,6 +23,7 @@ import CodeIcon from '@mui/icons-material/Code'; // Open Source
 import LockIcon from '@mui/icons-material/Lock'; // Security
 import FavoriteIcon from '@mui/icons-material/Favorite'; // Wellness/Get Started
 import GitHubIcon from '@mui/icons-material/GitHub'; // GitHub Icon
+import AppLogo from '../assets/app_logo.svg'; // Import the logo
 
 // Use a theme similar to Login for consistency, assuming dark mode preference
 const landingTheme = createTheme({
@@ -160,12 +161,16 @@ function LandingPage() {
       <Container maxWidth="lg" sx={{ textAlign: 'center', py: { xs: 3, md: 5 } }}>
         {/* Hero Section */}
         <Box sx={{ my: { xs: 4, md: 6 } }}>
+           {/* Logo */}
+           <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+             <img src={AppLogo} alt="StillPoint Logo" style={{ height: '200px', width: 'auto' }} />
+           </Box>
            {/* Use theme's secondary color for title */}
           <Typography variant="h1" component="h1" gutterBottom sx={{ color: 'secondary.main' }}>
-            Meet Aura: The AI That Learns You
+            Meet StillPoint: The AI That Learns You
           </Typography>
           <Typography variant="h5" color="text.secondary" sx={{ mb: 4, maxWidth: '750px', mx: 'auto' }}>
-            The first truly <strong style={{ color: landingTheme.palette.primary.light }}>open-source</strong> AI tool for personal reflection. Aura gets to know you better with every conversation, offering a private space for insight and growth.
+            The first truly <strong style={{ color: landingTheme.palette.primary.light }}>open-source</strong> platform for AI-powered personal reflection. Within StillPoint, the AI gets to know you better with every conversation, offering a private space for insight and growth.
           </Typography>
           <Button
             variant="contained"
@@ -181,26 +186,26 @@ function LandingPage() {
         {/* Features Section - REORDERED AND REWRITTEN */}
         <Box sx={{ my: { xs: 6, md: 10 } }}>
           <Typography variant="h2" component="h2" gutterBottom>
-            Why Aura is Different
+            Why StillPoint is Different
           </Typography>
           <Grid container spacing={4} justifyContent="center" alignItems="stretch">
             {/* Feature 1: Learns & Adapts */}
             <FeatureCard
               icon={AutoAwesomeIcon}
-              title="It Gets Smarter"
-              description="Aura doesn't just talk; it listens and learns. Through your conversations and reflections (securely stored!), it develops a deeper understanding, providing increasingly relevant and personalized support over time."
+              title="AI That Learns"
+              description="The AI within StillPoint doesn't just talk; it listens and learns. Through your conversations and reflections (securely stored!), it develops a deeper understanding, providing increasingly relevant and personalized support over time."
             />
             {/* Feature 2: Personalized Experience */}
             <FeatureCard
               icon={TuneIcon}
               title="Tailored To You"
-              description="Your journey is unique, and Aura respects that. Based on your initial insights and ongoing chats, Aura adapts its approach. You guide the conversation, shaping an experience that truly resonates with you."
+              description="Your journey is unique. Within StillPoint, the AI adapts its approach based on your initial insights and ongoing chats. You guide the conversation, shaping an experience that truly resonates with you."
             />
             {/* Feature 3: Radically Open Source */}
             <FeatureCard
               icon={CodeIcon}
               title="Completely Open Source"
-              description="Transparency is key. Aura is built as the first open-source AI reflection tool. Anyone can view, audit, or even contribute to the code. No hidden agendas, just a community-driven tool for well-being."
+              description="Transparency is key. StillPoint is the first open-source platform featuring an AI reflection tool. Anyone can view, audit, or even contribute to the code. No hidden agendas, just a community-driven platform for well-being."
             >
                 <Box sx={{ mt: 'auto', pt: 2 }}> {/* Pushes button to bottom */}
                    <Button
@@ -258,7 +263,7 @@ function LandingPage() {
           <Typography variant="body2" color="text.secondary" align="center">
             {'© '}
             {new Date().getFullYear()}
-            {' Aura Companion. The First Open Source AI Reflection Tool.'}
+            {' StillPoint Companion. The First Open Source Platform for AI Reflection.'}
           </Typography>
            <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 1 }}>
              {/* Make sure this link is correct or remove if no public repo yet */}

@@ -10,7 +10,7 @@ import LandingPage from './landing/LandingPage.jsx'; // Import LandingPage
 
 import UserProfile from './profile/user_profile.jsx';
 import Footer from './nav/footer.jsx';
-import Privacy from './user/privacy.jsx';
+import Privacy from './user/privacy/privacy_view.jsx';
 import Settings from './user/settings.jsx';
 import Questionnaire from './profile/insights/questionnaire.jsx';
 import { ThemeProvider, createTheme, CssBaseline, CircularProgress } from '@mui/material'; // Import CircularProgress

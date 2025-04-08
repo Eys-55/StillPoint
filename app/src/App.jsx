@@ -233,8 +233,8 @@ function App() {
               element={<Settings darkMode={darkMode} setDarkMode={setDarkMode} />}
             />
             <Route path="/privacy" element={<Privacy />} /> {/* Keep privacy potentially accessible */}
-            {/* Route path="/get-started" was duplicated, assuming the one inside ProtectedRoute is correct */}
-            <Route path="/questionnaire" element={<Questionnaire />} /> {/* Changed path to avoid conflict */}
+            <Route path="/questionnaire" element={<Questionnaire />} /> {/* Ensure this path matches links */}
+            {/* Note: Insights and Summaries are likely part of /profile now */}
           </Route>
 
           {/* Fallback Route */}

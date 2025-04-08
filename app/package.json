@@ -21,7 +21,9 @@
     "firebase": "^11.5.0",
     "react": "^19.0.0",
     "react-calendar": "^5.1.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-slick": "^0.30.3",
+    "slick-carousel": "^1.8.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

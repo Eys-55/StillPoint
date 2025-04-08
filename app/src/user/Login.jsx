@@ -3,7 +3,8 @@ import { auth } from '../firebase.jsx';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendEmailVerification // Import sendEmailVerification
+  sendEmailVerification, // Import sendEmailVerification
+  sendPasswordResetEmail // Import sendPasswordResetEmail
 } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { useAuthState } from 'react-firebase-hooks/auth'; // Import useAuthState
@@ -78,7 +79,8 @@ const theme = createTheme({
 function Login() {
   const [error, setError] = useState('');
   const [info, setInfo] = useState(''); // For success/info messages
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // For login/signup loading
+  const [resetLoading, setResetLoading] = useState(false); // For password reset loading
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -123,7 +125,13 @@ function Login() {
     setError('');
     setInfo('');
     setLoading(true);
-    console.log("Attempting email login...");
+    console.log("Attempting email sign up...");
+    // Client-side password length check
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      setLoading(false);
+      return;
+    }
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       console.log("Email login attempt successful:", userCredential.user);
@@ -170,6 +178,36 @@ function Login() {
        handleAuthError(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError('');
+    setInfo('');
+    if (!email) {
+      setError("Please enter your email address first.");
+      return;
+    }
+    setResetLoading(true);
+    console.log("Attempting password reset for:", email);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      console.log("Password reset email sent successfully.");
+      setInfo("Password reset email sent. Check your inbox (and spam folder).");
+    } catch (err) {
+      console.error("Password reset error:", err);
+      // Use handleAuthError for consistency, or provide specific messages
+      if (err.code === 'auth/user-not-found') {
+        setError("No account found with this email address.");
+      } else if (err.code === 'auth/invalid-email') {
+        setError("Invalid email address format.");
+      } else if (err.code === 'auth/missing-email') {
+        setError("Please enter your email address.");
+      } else {
+        setError("Failed to send password reset email. Please try again.");
+      }
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -270,15 +308,15 @@ function Login() {
                     disabled={loading || authLoading || !email || !password} // Disable during initial auth check too
                     sx={{ py: 1.5 /* borderRadius applied via theme */ }}
                  >
-                  Sign Up
+                 Sign Up
                  </Button>
               </Stack>
-               {/* Optional: Add a "Forgot Password?" link here */}
-               {/* <Box textAlign="center" sx={{ mt: 1 }}>
-                 <Link href="#" variant="body2">
-                   Forgot password?
-                 </Link>
-               </Box> */}
+              {/* Forgot Password Link */}
+              <Box textAlign="center" sx={{ mt: 2 }}>
+                <Link component="button" variant="body2" onClick={handleForgotPassword} disabled={resetLoading || loading || authLoading || !email}>
+                  {resetLoading ? 'Sending...' : 'Forgot password?'}
+                </Link>
+              </Box>
             </Box>
 
             {/* Removed Divider and Social Logins */}

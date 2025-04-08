@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
-import Login from './user/login.jsx';
+import Login from './user/Login.jsx';
 import Home from './home/home.jsx';
 import { auth } from './firebase.jsx';
 import { signOut } from 'firebase/auth';
@@ -102,39 +102,83 @@ function App() {
            borderRadius: 16, // Example global border radius
          },
          components: {
-           // Consistent button rounding (can be overridden)
+           // Default button rounding (can be overridden with sx)
            MuiButton: {
              styleOverrides: {
-               root: {
-                 borderRadius: 50,
-               },
+               root: ({ theme }) => ({
+                 // Use a standard medium radius from styles.css (--border-radius-md: 8px)
+                 // theme.shape.borderRadius is 16px based on the shape definition above
+                 borderRadius: 8, // Default to 8px
+                 // Allow specific buttons (like icon buttons or pills) to override via sx
+               }),
              },
            },
-           // Consistent TextField rounding (can be overridden)
+           // Default TextField rounding
            MuiTextField: {
              styleOverrides: {
-               root: {
+               root: ({ theme }) => ({
                  '& .MuiOutlinedInput-root': {
-                   borderRadius: 50,
+                   // Use a standard medium radius
+                   borderRadius: 8,
                  },
-               },
+               }),
              },
            },
-           // Consistent Card rounding (can be overridden)
+           // Default Card rounding
            MuiCard: {
              styleOverrides: {
-               root: {
-                 borderRadius: 20,
-               }
+               root: ({ theme }) => ({
+                 // Use a standard large radius from styles.css (--border-radius-lg: 16px)
+                 borderRadius: 16,
+               }),
              }
            },
-           // Consistent Alert rounding (can be overridden)
+           // Default Alert rounding
            MuiAlert: {
              styleOverrides: {
-               root: {
-                 borderRadius: 12,
-               }
+               root: ({ theme }) => ({
+                 // Use a standard medium radius
+                 borderRadius: 8,
+               }),
              }
+           },
+           // Default Paper rounding (optional, can be overridden)
+           MuiPaper: {
+             styleOverrides: {
+                root: ({ theme }) => ({
+                    // Default paper to large radius, often used for containers
+                    borderRadius: 16,
+                }),
+             }
+           },
+           // Default ToggleButton rounding (part of a group)
+           MuiToggleButton: {
+                styleOverrides: {
+                    root: ({ theme }) => ({
+                        // Use medium radius for individual toggle buttons
+                        borderRadius: 8,
+                    }),
+                }
+           },
+           // Default ToggleButtonGroup rounding
+           MuiToggleButtonGroup: {
+                styleOverrides: {
+                    root: ({ theme }) => ({
+                        // Use medium radius for the group container
+                        borderRadius: 8,
+                    }),
+                    // Ensure grouped buttons merge nicely
+                    grouped: ({ theme }) => ({
+                        '&:not(:first-of-type)': {
+                            borderLeft: `1px solid ${theme.palette.divider}`,
+                            marginLeft: -1, // Overlap borders
+                            borderRadius: 8, // Maintain radius
+                        },
+                        '&:not(:last-of-type)': {
+                            borderRadius: 8, // Maintain radius
+                        },
+                    }),
+                }
            }
          }
       }),
@@ -189,7 +233,8 @@ function App() {
               element={<Settings darkMode={darkMode} setDarkMode={setDarkMode} />}
             />
             <Route path="/privacy" element={<Privacy />} /> {/* Keep privacy potentially accessible */}
-            <Route path="/get-started" element={<Questionnaire />} />
+            {/* Route path="/get-started" was duplicated, assuming the one inside ProtectedRoute is correct */}
+            <Route path="/questionnaire" element={<Questionnaire />} /> {/* Changed path to avoid conflict */}
           </Route>
 
           {/* Fallback Route */}

@@ -1,63 +1,173 @@
 /* styles.css */
+/* Design System Foundation */
 
-/* Ensure box-sizing includes padding and border */
+/* --- Global Resets & Base Styles --- */
+
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+  margin: 0; /* Reset default margins */
+  padding: 0; /* Reset default padding */
 }
 
 /* Force vertical scrollbar to always be visible to prevent layout shifts */
+/* Apply base background and text color using CSS variables */
 body {
   overflow-y: scroll;
-  margin: 0; /* Ensure no default body margin interferes */
-  padding: 0; /* Ensure no default body padding interferes */
-  /* Let ThemeProvider handle background color for MUI components,
-     but set base background using CSS vars for non-MUI or root elements */
-  background-color: var(--light-background); /* Default to light */
-  color: var(--light-text); /* Default text color */
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased; /* Smoother fonts */
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Apply dark mode colors when the data attribute is present */
-body[data-bs-theme="dark"] {
-   background-color: var(--dark-background);
-   color: var(--dark-text);
-}
-
+/* --- Design Tokens --- */
 
 :root {
-  /* Light Mode Colors */
-  --light-background: #faf9f5;
-  --light-textbox: #f7f6f2;    /* Use for cards, text inputs etc. on light background */
-  --light-text: #6e6e6e;
+  /* == Color Palette (Light Mode) == */
+  /* Purpose: Define base colors for light theme. */
+  --color-background: #faf9f5;         /* Light Background (Off-white) */
+  --color-surface: #f7f6f2;            /* Light Surface (Cards, Textboxes, slightly lighter than bg) */
+  --color-primary: #70ade0;             /* Primary Brand Opposite (Blue) - Used for primary actions, highlights */
+  --color-primary-contrast: #ffffff;   /* Text/Icons on Primary */
+  --color-secondary: #db714f;           /* Secondary Brand (Orange) - Used for accents, secondary actions */
+  --color-secondary-contrast: #ffffff; /* Text/Icons on Secondary */
+  --color-text-primary: #212121;       /* Dark Grey for primary text */
+  --color-text-secondary: #6e6e6e;     /* Medium Grey for secondary text, placeholders */
+  --color-border: #e0e0e0;            /* Subtle border color */
+  --color-divider: #eeeeee;           /* Slightly lighter divider color */
+  --color-error: #d32f2f;              /* Standard Red for errors */
+  --color-warning: #ffa000;            /* Standard Amber for warnings */
+  --color-success: #388e3c;            /* Standard Green for success */
+  --color-info: #1976d2;               /* Standard Blue for info */
+  --color-action-hover: rgba(0, 0, 0, 0.04); /* Subtle hover effect for light backgrounds */
+  --color-action-selected: rgba(0, 0, 0, 0.08); /* Subtle selected effect */
 
-  --main-brand: #db714f;       /* Primary brand color (logo, accents) */
-  --main-brand-opposite: #70ade0; /* Contrasting/secondary brand color */
+  /* == Typography == */
+  /* Purpose: Define font properties and type scale. */
+  --font-family-base: 'Roboto', 'Helvetica Neue', Arial, sans-serif; /* Example font stack */
+  /* --font-family-headings: 'Georgia', serif; /* Optional: Different heading font */
 
-  /* Dark Mode Colors */
-  --dark-background: #262624;
-  --dark-textbox: #30302e;     /* Use for cards, text inputs etc. on dark background */
-  --dark-text: #c2c0b6;
-  /* Dark mode often uses lightened versions of brand colors or opposites */
-  /* Let's keep the light mode brand colors for reference, but they might need adjustment for dark theme */
-  /* --dark-brand-primary: #e58a6f; /* Example: Lighter version of light-brand */
-  /* --dark-brand-secondary: #8ac0e8; /* Example: Lighter version of light-brand-opposite */
+  /* Font Sizes (Example Scale - Adjust as needed) */
+  --font-size-h1: 2.5rem;    /* ~40px */
+  --font-size-h2: 2rem;      /* ~32px */
+  --font-size-h3: 1.75rem;   /* ~28px */
+  --font-size-h4: 1.5rem;    /* ~24px */
+  --font-size-h5: 1.25rem;   /* ~20px */
+  --font-size-h6: 1.125rem;  /* ~18px */
+  --font-size-body-1: 1rem;    /* ~16px (Base Body Size) */
+  --font-size-body-2: 0.875rem; /* ~14px (Secondary Body / Smaller Text) */
+  --font-size-button: 0.875rem; /* ~14px (Button Text) */
+  --font-size-caption: 0.75rem;  /* ~12px (Captions, Small Labels) */
+  --font-size-overline: 0.625rem;/* ~10px (Overline Text) */
 
-  /* Define text colors for specific backgrounds if needed */
-  --text-on-dark: #ffffff; /* White text on dark backgrounds */
-  --text-on-light: #000000; /* Black text on light backgrounds */
+  /* Font Weights */
+  --font-weight-light: 300;
+  --font-weight-regular: 400; /* Standard weight */
+  --font-weight-medium: 500;  /* Slightly bolder, good for buttons, tabs */
+  --font-weight-bold: 700;    /* Bold weight */
+
+  /* == Spacing == */
+  /* Purpose: Consistent spacing units for margins, padding. (Based on 8px grid) */
+  --spacing-xs: 4px;   /* Extra Small */
+  --spacing-sm: 8px;   /* Small */
+  --spacing-md: 16px;  /* Medium (Base Unit) */
+  --spacing-lg: 24px;  /* Large */
+  --spacing-xl: 32px;  /* Extra Large */
+  --spacing-xxl: 48px; /* Double Extra Large */
+
+  /* == Borders & Radius == */
+  /* Purpose: Consistent border styles and corner rounding. */
+  --border-width-sm: 1px;
+  --border-width-md: 2px;
+
+  --border-radius-sm: 4px;   /* Small radius (Tags, Badges) */
+  --border-radius-md: 8px;   /* Medium radius (Cards, Inputs, Buttons) - Default */
+  --border-radius-lg: 16px;  /* Large radius (Modals, Larger containers) */
+  --border-radius-xl: 24px;  /* Extra Large radius */
+  --border-radius-pill: 9999px; /* Pill shape (Chips, Avatars if circular) */
+  --border-radius-circle: 50%; /* Circle shape (Avatars, Icons bg) */
+
+  /* == Shadows / Elevation == */
+  /* Purpose: Subtle depth effects. */
+  /* Example: MUI elevation levels */
+  --shadow-elevation-1: 0px 2px 1px -1px rgba(0,0,0,0.2), 0px 1px 1px 0px rgba(0,0,0,0.14), 0px 1px 3px 0px rgba(0,0,0,0.12); /* Subtle */
+  --shadow-elevation-2: 0px 3px 1px -2px rgba(0,0,0,0.2), 0px 2px 2px 0px rgba(0,0,0,0.14), 0px 1px 5px 0px rgba(0,0,0,0.12); /* Default Card */
+  --shadow-elevation-4: 0px 2px 4px -1px rgba(0,0,0,0.2), 0px 4px 5px 0px rgba(0,0,0,0.14), 0px 1px 10px 0px rgba(0,0,0,0.12);/* Medium */
+  --shadow-elevation-8: 0px 5px 5px -3px rgba(0,0,0,0.2), 0px 8px 10px 1px rgba(0,0,0,0.14), 0px 3px 14px 2px rgba(0,0,0,0.12); /* Larger */
+
+  /* == Transitions == */
+  /* Purpose: Standard transition timings. */
+  --transition-duration-short: 150ms;
+  --transition-duration-standard: 250ms;
+  --transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); /* Ease-out */
+
+  /* == Layout == */
+  /* Purpose: Define key layout dimensions */
+   --header-height: 64px; /* Standard App Bar height */
+   --footer-height: 56px; /* Standard Bottom Navigation height */
+   /* Add sidebar width if fixed */
+   /* --sidebar-width-collapsed: 72px; */
+   /* --sidebar-width-expanded: 240px; */
+
 }
 
-/* You can add other global styles here */
+/* --- Dark Mode Overrides --- */
 
-/* Example: Style links globally if needed */
+body[data-bs-theme="dark"] {
+  /* == Color Palette (Dark Mode) == */
+  /* Purpose: Define base colors for dark theme. */
+  --color-background: #262624;         /* Dark Background (Very Dark Grey/Brown) */
+  --color-surface: #30302e;            /* Dark Surface (Cards, Textboxes, slightly lighter than dark bg) */
+  --color-primary: #8ac0e8;             /* Primary Brand Opposite (Lighter Blue) */
+  --color-primary-contrast: #000000;   /* Text/Icons on Primary (Dark) */
+  --color-secondary: #e58a6f;           /* Secondary Brand (Lighter Orange) */
+  --color-secondary-contrast: #000000; /* Text/Icons on Secondary (Dark) */
+  --color-text-primary: #ffffff;       /* White text */
+  --color-text-secondary: #c2c0b6;     /* Light Grey/Off-white for secondary text */
+  --color-border: #424242;            /* Darker border color */
+  --color-divider: #515151;           /* Slightly lighter divider for dark */
+  --color-error: #ef5350;              /* Lighter Red for errors on dark */
+  --color-warning: #ffb74d;            /* Lighter Amber for warnings on dark */
+  --color-success: #81c784;            /* Lighter Green for success on dark */
+  --color-info: #64b5f6;               /* Lighter Blue for info on dark */
+  --color-action-hover: rgba(255, 255, 255, 0.08); /* Subtle hover effect for dark backgrounds */
+  --color-action-selected: rgba(255, 255, 255, 0.16); /* Subtle selected effect for dark */
+
+  /* == Shadows / Elevation (Dark Mode) == */
+  /* Purpose: Adjust shadows for dark backgrounds if needed (often less intense). */
+  /* You might use the same shadows or define specific dark mode versions if contrast is an issue. */
+  /* Example: Using same shadows for simplicity */
+  /* --shadow-elevation-1-dark: var(--shadow-elevation-1); */
+}
+
+/* --- Utility Classes (Optional) --- */
 /*
+.text-primary { color: var(--color-text-primary); }
+.text-secondary { color: var(--color-text-secondary); }
+.bg-primary { background-color: var(--color-primary); }
+.bg-surface { background-color: var(--color-surface); }
+
+.p-sm { padding: var(--spacing-sm); }
+.m-md { margin: var(--spacing-md); }
+
+.rounded-md { border-radius: var(--border-radius-md); }
+.shadow-2 { box-shadow: var(--shadow-elevation-2); }
+*/
+
+/* --- Component-Specific Overrides (Keep Minimal) --- */
+/*
+Example: If you need global link styling *not* handled by MUI's ThemeProvider Link component
 a {
-  color: inherit; // Or set a specific theme color
+  color: var(--color-primary);
   text-decoration: none;
+  transition: color var(--transition-duration-short) var(--transition-timing-function);
 }
 
 a:hover {
+  color: var(--color-secondary); // Or a darkened/lightened primary
   text-decoration: underline;
 }
 */

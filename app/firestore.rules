@@ -5,5 +5,16 @@ service cloud.firestore {
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // Allow authenticated users to create feedback documents
+    // Optionally allow reading their own feedback later if needed
+    match /feedback/{feedbackId} {
+      // Allow create if user is authenticated and the feedback belongs to them
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // Optional: Allow user to read their own feedback
+      // allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Optional: Allow updates/deletes by owner? Be careful with this.
+      // allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
   }
 }

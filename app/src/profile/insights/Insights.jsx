@@ -144,7 +144,8 @@ function Insights() {
   // Loading State
   if (loading) {
     return (
-      <Card elevation={2} sx={{ borderRadius: 3, minHeight: 200 }}> {/* Added minHeight */}
+      // Use theme's default Card border radius (16px)
+      <Card elevation={2} sx={{ minHeight: 200 }}> {/* Added minHeight */}
         <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Stack direction="row" spacing={1.5} alignItems="center" mb={3}>
             <PsychologyOutlinedIcon color="action" />
@@ -161,7 +162,8 @@ function Insights() {
   }
 
   return (
-    <Card elevation={2} sx={{ borderRadius: 3 }}>
+    // Use theme's default Card border radius (16px)
+    <Card elevation={2}>
       <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
         <Stack direction="row" spacing={1.5} alignItems="center" mb={1}> {/* Reduced mb */}
           <PsychologyOutlinedIcon color="action" />
@@ -185,12 +187,16 @@ function Insights() {
 
         {/* Answers List / Edit Area */}
         <Stack spacing={2} sx={{ mt: 2 }}>
-          {(questionnaireData?.answers || []).map((item, index) => {
+          {/* Ensure questionnaireData and answers exist before mapping */}
+          {questionnaireData?.answers?.map((item, index) => {
+            // Define isCurrentlyEditingThis inside the map scope
             const isCurrentlyEditingThis = editingQuestion === item.question;
             const questionDefinition = questions.find(q => q.question === item.question); // Find options for RadioGroup
 
             return (
-              <Paper key={index} variant="outlined" sx={{ p: 1.5, borderRadius: 2, position: 'relative' }}>
+              // Use theme's default Paper border radius (or specify 8px if needed)
+              <Paper key={index} variant="outlined" sx={{ p: 1.5, borderRadius: 2, position: 'relative' }}> {/* Keep 2 for tighter look? Let's try 8px */}
+              {/* <Paper key={index} variant="outlined" sx={{ p: 1.5, borderRadius: '8px', position: 'relative' }}> */}
                 {/* Question Text */}
                 <Typography variant="body1" gutterBottom sx={{ fontWeight: 'medium', pr: 4 }}> {/* Add padding for icon */}
                   {index + 1}. {item.question}
@@ -273,8 +279,9 @@ function Insights() {
             <Button
               variant="contained"
               startIcon={<PsychologyOutlinedIcon />}
-              onClick={() => navigate('/get-started')}
-              sx={{ borderRadius: 5, px: 3 }}
+              onClick={() => navigate('/questionnaire')} // Changed path to match App.jsx
+              // Use theme default (8px) or specify pill shape if desired
+              sx={{ borderRadius: '50px', px: 3 }} // Make this button pill-shaped
             >
               Start Questionnaire
             </Button>

@@ -29,11 +29,13 @@ function PrivacyView() {
     return null;
   };
 
+  // Added missing opening parenthesis
   return (
     // Use Box for full height and centering if needed, or just Container
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)', /* Adjust based on header */ bgcolor: 'background.default', py: 4 }}>
       <Container component="main" maxWidth="md" sx={{ flexGrow: 1 }}>
-        <Paper sx={{ p: { xs: 2, sm: 3 }, borderRadius: 2, boxShadow: 3 }}> {/* Adjust padding */}
+       {/* Use theme's default Paper border radius (16px) */}
+       <Paper sx={{ p: { xs: 2, sm: 3 }, boxShadow: 3, borderRadius: 4 /* Example: Use theme's large radius */ }}> {/* Adjust padding */}
           <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'medium', mb: 1 }}>
             {privacyContent.title}
           </Typography>

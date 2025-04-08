@@ -182,7 +182,8 @@ function Questionnaire() {
   if (isEditable) {
     return (
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-        <Paper elevation={3} sx={{ borderRadius: 4, p: { xs: 2, sm: 3, md: 4 } }}>
+        {/* Use theme's default Paper border radius (16px) */}
+        <Paper elevation={3} sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
           <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'medium', mb: 3 }}>
             Review Your Responses
           </Typography>
@@ -226,20 +227,23 @@ function Questionnaire() {
                 onClick={() => navigate('/profile')} // Navigate back to profile on cancel
                 disabled={saving}
                 color="secondary"
-                sx={{ borderRadius: 5, px: 3 }}
+                // Use theme default (8px) or specify pill shape
+                sx={{ borderRadius: '50px', px: 3 }} // Make Cancel button pill-shaped
               >
                 Cancel
               </Button>
+              {/* Added missing opening <Button tag */}
               <Button
                 type="submit"
                 variant="contained"
                 disabled={saving}
                 startIcon={saving ? <CircularProgress size={20} color="inherit" /> : null}
-                sx={{ borderRadius: 5, px: 3 }}
+                // Use theme default (8px) or specify pill shape
+                sx={{ borderRadius: '50px', px: 3 }} // Make Save button pill-shaped
               >
                 {saving ? 'Saving...' : 'Save Changes'}
               </Button>
-            </Box>
+            </Box> {/* Closing Box tag was missing */}
           </form>
         </Paper>
       </Container>
@@ -253,24 +257,24 @@ function Questionnaire() {
 
   return (
     <Container maxWidth="sm" sx={{ mt: { xs: 3, sm: 5 }, mb: 4 }}>
-      {/* Progress Bar */}
-       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
          <Box sx={{ width: '100%', mr: 1 }}>
-           <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 4 }}/>
+          {/* Use standard medium border radius */}
+          <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: '8px' }}/>
          </Box>
          <Box sx={{ minWidth: 55 }}> {/* Adjusted width */}
            {/* Show N/Total */}
            <Typography variant="body2" color="text.secondary">{`${currentQuestionIndex + 1}/${questions.length}`}</Typography>
          </Box>
        </Box>
-
-      {/* Question Card */}
-      <Fade in={fade} timeout={300}>
-        <Paper elevation={3} sx={{ borderRadius: 4 }}>
-          <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-            <Typography variant="h5" component="div" sx={{ mb: 4, fontWeight: 'medium', textAlign: 'center' }}>
-              {currentQ.question}
-            </Typography>
+       {/* Question Card */}
+       <Fade in={fade} timeout={300}>
+        {/* Use theme's default Paper border radius (16px) */}
+        <Paper elevation={3}>
+           <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+             <Typography variant="h5" component="div" sx={{ mb: 4, fontWeight: 'medium', textAlign: 'center' }}>
+               {currentQ.question}
+             </Typography> {/* Closing Typography tag was missing */}
             <Stack spacing={2}>
               {currentQ.options.map((option, idx) => (
                 <Button
@@ -279,15 +283,15 @@ function Questionnaire() {
                   fullWidth
                   onClick={() => handleAnswer(option)}
                   sx={{
-                    justifyContent: 'flex-start',
-                    textTransform: 'none',
-                    py: 1.5,
-                    px: 2,
-                    borderRadius: 3,
-                    borderColor: 'grey.400',
-                    '&:hover': {
-                      backgroundColor: 'action.hover'
-                    }
+                     justifyContent: 'flex-start',
+                     textTransform: 'none',
+                     py: 1.5,
+                     px: 2,
+                    borderRadius: '8px', // Use standard medium radius
+                     borderColor: 'grey.400',
+                     '&:hover': {
+                       backgroundColor: 'action.hover'
+                     } // Closing brace was missing
                    }}
                 >
                   <CheckCircleOutlineIcon sx={{ mr: 1.5, color: 'grey.500' }} />

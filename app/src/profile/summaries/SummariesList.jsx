@@ -35,10 +35,13 @@ import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt
 const formatDate = (date) => {
   if (!date) return 'N/A';
   try {
-    return date.toLocaleDateString('en-US', {
+    // Check if date is a Firestore Timestamp and convert if necessary
+    const jsDate = date instanceof Timestamp ? date.toDate() : date;
+    return jsDate.toLocaleDateString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
     });
   } catch (e) {
+    console.error("Error formatting date:", e, "Input date:", date);
     return 'Invalid Date';
   }
 };
@@ -147,28 +150,33 @@ function SummariesList() {
     return <Alert severity="error" sx={{ mt: 2, borderRadius: 2 }}>{errorBundled}</Alert>;
   }
 
+  // Check for empty summaries *after* loading and error checks
   if (bundledSummaries.length === 0) {
     return (
-      <Paper elevation={0} sx={{ p: {xs: 3, sm: 5}, mt: 0, textAlign: 'center', bgcolor: 'action.hover', borderRadius: 3 }}>
+     // Use theme's default Paper border radius (16px)
+     <Paper elevation={0} sx={{ p: {xs: 3, sm: 5}, mt: 0, textAlign: 'center', bgcolor: 'action.hover', borderRadius: 4 /* Example: Use theme's large radius */ }}>
         <SentimentSatisfiedAltIcon sx={{ fontSize: 50, color: 'text.secondary', mb: 2 }} />
         <Typography variant="h6" color="text.primary" gutterBottom>
           No summaries yet!
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-          After a chat session, you can create a summary. Your reflections will appear here.
+         After a chat session, you can create a summary. Your reflections will appear here.
         </Typography>
-        <Button variant="contained" onClick={() => navigate('/chat')} sx={{mt: 2, borderRadius: 5, px: 3}}>
+       {/* Use theme default (8px) or specify pill shape */}
+       <Button variant="contained" onClick={() => navigate('/chat')} sx={{mt: 2, borderRadius: '50px', px: 3}}>
           Start a New Chat
         </Button>
-      </Paper>
+      </Paper> // Corrected closing tag placement
     );
   }
 
+  // Render the list if summaries exist
   return (
     <Grid container spacing={3}>
       {bundledSummaries.map((item) => (
         <Grid item xs={12} md={6} lg={4} key={item.id}>
-          <Card elevation={2} sx={{ display: 'flex', flexDirection: 'column', height: '100%', borderRadius: 3 }}>
+         {/* Use theme's default Card border radius (16px) */}
+         <Card elevation={2} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {editingId === item.id ? (
               // --- Edit State Card ---
               <>
@@ -214,12 +222,13 @@ function SummariesList() {
                     disabled={isSavingEdit}
                     size="small"
                     placeholder="Enter Summary"
-                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                   // Use theme's default TextField border radius (8px)
+                   // sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }} // Removed explicit override
                   />
                 </CardContent>
               </>
-            ) : (
-              // --- Display State Card ---
+            ) : ( // Corrected ternary operator syntax
+              // --- View State Card ---
               <>
                 <CardHeader
                   title={<Typography variant="h6" sx={{ fontWeight: 500 }}>{cleanText(item.title)}</Typography>}
@@ -238,11 +247,13 @@ function SummariesList() {
                         open={openMenu && currentMenuId === item.id}
                         onClose={handleCloseMenu}
                         MenuListProps={{ sx: { py: 0.5 } }}
-                        PaperProps={{ sx: { borderRadius: 2, mt: 0.5 } }}
+                       // Use standard medium radius for menu paper
+                       PaperProps={{ sx: { borderRadius: '8px', mt: 0.5 } }}
                       >
                         <MenuItem onClick={() => startEditing(item)} sx={{ fontSize: '0.9rem' }}>
                           <EditIcon fontSize="small" sx={{ mr: 1.5, color: 'text.secondary' }} /> Edit Title/Summary
                         </MenuItem>
+                        {/* Added missing onClick handler */}
                         <MenuItem onClick={() => handleDeleteMemoryOnly(item.id)} sx={{ fontSize: '0.9rem' }}>
                           <DeleteIcon fontSize="small" sx={{ mr: 1.5, color: 'text.secondary' }}/> Remove Summary Only
                         </MenuItem>

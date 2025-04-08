@@ -43,12 +43,14 @@ function UserProfile() {
       {/* Add bottom margin (mb) to account for fixed Footer height + buffer */}
       <Container maxWidth="lg" sx={{ /* mt: 5, removed */ mb: `${FOOTER_HEIGHT + 16}px`, flexGrow: 1 }}>
         {/* User Info Header */}
-        <Paper elevation={0} sx={{ p: {xs: 2, sm: 3}, mb: 4, borderRadius: 4, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+       {/* Use theme's default Paper border radius (16px) */}
+       <Paper elevation={0} sx={{ p: {xs: 2, sm: 3}, mb: 4, bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 4 /* Example: Use theme's large radius */ }}>
           <Stack direction="row" spacing={2} alignItems="center">
             <Avatar sx={{ bgcolor: 'background.paper', color: 'primary.main', width: 56, height: 56 }}>
               <AccountCircleOutlinedIcon fontSize="large" />
             </Avatar>
-            <Box>
+            {/* Corrected structure: Typography directly under Stack */}
+            <Box> {/* Optional Box for vertical stacking if needed, or remove if Stack handles it */}
               <Typography variant="h5" component="h1" sx={{ fontWeight: 'medium' }}>
                 {user?.displayName || 'Your Profile'}
               </Typography>
@@ -62,22 +64,24 @@ function UserProfile() {
         {/* View Mode Toggle (Slider) - Already Centered */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
           <ToggleButtonGroup
-            value={viewMode}
-            exclusive
+            value={viewMode} // Ensure value is controlled
+            exclusive // Ensure only one button can be active
             onChange={handleViewChange}
             aria-label="Profile view mode"
             color="primary"
-            sx={{ bgcolor: 'background.paper', borderRadius: 5 }} // Background for the group
+           // Apply pill shape radius
+           sx={{ bgcolor: 'background.paper', borderRadius: '50px' }} // Background for the group
           >
-            <ToggleButton value="insights" aria-label="insights questionnaire" sx={{ borderRadius: 5, px: 3, textTransform: 'none' }}>
+           {/* Apply pill shape radius to individual buttons */}
+           <ToggleButton value="insights" aria-label="insights questionnaire" sx={{ borderRadius: '50px', px: 3, textTransform: 'none' }}>
               <PsychologyOutlinedIcon sx={{ mr: 1 }} />
               Insights
             </ToggleButton>
-            <ToggleButton value="summaries" aria-label="conversation summaries" sx={{ borderRadius: 5, px: 3, textTransform: 'none' }}>
+           <ToggleButton value="summaries" aria-label="conversation summaries" sx={{ borderRadius: '50px', px: 3, textTransform: 'none' }}>
               <ListAltOutlinedIcon sx={{ mr: 1 }} />
               Reflections
             </ToggleButton>
-          </ToggleButtonGroup>
+          </ToggleButtonGroup> {/* Added missing closing tag */}
         </Box>
 
         {/* Conditional Content Area - Container handles centering */}

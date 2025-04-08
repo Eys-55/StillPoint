@@ -42,26 +42,8 @@ function UserProfile() {
       {/* <Header mode="profile" darkMode={isDarkMode} /> */} {/* Removed Header */}
       {/* Add bottom margin (mb) to account for fixed Footer height + buffer */}
       <Container maxWidth="lg" sx={{ /* mt: 5, removed */ mb: `${FOOTER_HEIGHT + 16}px`, flexGrow: 1 }}>
-        {/* User Info Header */}
-       {/* Use theme's default Paper border radius (16px) */}
-       <Paper elevation={0} sx={{ p: {xs: 2, sm: 3}, mb: 4, bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 4 /* Example: Use theme's large radius */ }}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar sx={{ bgcolor: 'background.paper', color: 'primary.main', width: 56, height: 56 }}>
-              <AccountCircleOutlinedIcon fontSize="large" />
-            </Avatar>
-            {/* Corrected structure: Typography directly under Stack */}
-            <Box> {/* Optional Box for vertical stacking if needed, or remove if Stack handles it */}
-              <Typography variant="h5" component="h1" sx={{ fontWeight: 'medium' }}>
-                {user?.displayName || 'Your Profile'}
-              </Typography>
-              <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                {user ? user.email : 'Loading...'}
-              </Typography>
-            </Box>
-          </Stack>
-        </Paper>
 
-        {/* View Mode Toggle (Slider) - Already Centered */}
+        {/* View Mode Toggle (Slider) - Centered */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
           <ToggleButtonGroup
             value={viewMode} // Ensure value is controlled

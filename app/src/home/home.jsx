@@ -82,23 +82,6 @@ function Home() {
       {/* Adjust top margin (mt) to account for removed header, or use padding on the parent Box */}
       {/* Add bottom margin (mb) to account for fixed Footer height + buffer */}
       <Container component="main" sx={{ /* mt: 4, removed */ mb: `${FOOTER_HEIGHT + 16}px`, flexGrow: 1 }}>
-        <Paper
-          elevation={2}
-          sx={{
-            p: { xs: 2, md: 4 },
-            mb: 3,
-            borderRadius: 2, // Reduced borderRadius
-            // bgcolor: 'primary.light', // Optional: Lighter background for paper
-            // color: 'primary.contrastText' // Optional: Ensure text contrasts
-          }}
-        >
-          <Typography variant="h4" component="h1" gutterBottom sx={{ display: 'flex', alignItems: 'center', fontWeight: 'medium' }}>
-            <WavingHandIcon sx={{ mr: 1, color: 'warning.main' }}/> Hello, {userName}!
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Welcome back! Ready to check in or explore your wellness journey?
-          </Typography>
-        </Paper>
 
         {questionnaireCompleted === false && (
           <Alert
@@ -126,39 +109,7 @@ function Home() {
         <Stack spacing={4}> {/* Increased spacing */}
           <Tracker />
 
-          <Paper
-             elevation={2}
-             sx={{
-               p: 3, // Increased padding
-               borderRadius: 2 // Reduced borderRadius
-             }}
-           >
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'medium', textAlign: 'center' }}>
-               Quick Actions
-             </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<ChatIcon />}
-                 onClick={() => handleNavigation('/chat')}
-                 disabled={questionnaireCompleted === false}
-                 sx={{ flexGrow: 1, borderRadius: 3, py: 1.5 }} // Reduced borderRadius & slightly taller
-               >
-                 Chat with Aura
-               </Button>
-              <Button
-                variant="outlined"
-                color="secondary" // Keep secondary, outline is less prominent
-                startIcon={<AccountCircleIcon />}
-                 onClick={() => handleNavigation('/profile')}
-                 disabled={questionnaireCompleted === false}
-                 sx={{ flexGrow: 1, borderRadius: 3, py: 1.5 }} // Reduced borderRadius & slightly taller
-               >
-                 Profile & Insights
-               </Button>
-            </Stack>
-          </Paper>
+          {/* Quick Actions Removed */}
         </Stack>
       </Container>
       {/* Footer rendered conditionally in App.jsx */}

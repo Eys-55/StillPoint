@@ -188,10 +188,14 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
                     }
                 }
 
-                const formattedHistory = validatedHistory.map(msg => ({
+                // Filter out messages with empty/null text BEFORE formatting
+                const validHistory = validatedHistory.filter(msg => msg.text && msg.text.trim() !== '');
+
+                const formattedHistory = validHistory.map(msg => ({
                     role: msg.role === 'user' ? 'user' : 'model', // Correctly map role
-                    parts: [{ text: msg.text }],
+                    parts: [{ text: msg.text }], // Now guaranteed to have non-empty text
                 }));
+
 
                 console.log("Starting chat session with history:", formattedHistory);
                 // Ensure model is ready before starting chat
@@ -299,13 +303,15 @@ export const useChatState = (activeConversationId, setActiveConversationId) => {
                  return;
              }
              console.log("Starting new chat session (temporary or first message of regular).");
-             // History for the AI should include the current user message
-             const historyForAI = currentMessages.map(msg => ({
+             // History for the AI should include the current user message, filtering empty ones
+             const validCurrentMessages = currentMessages.filter(msg => msg.text && msg.text.trim() !== '');
+             const historyForAI = validCurrentMessages.map(msg => ({
                  role: msg.role === 'user' ? 'user' : 'model',
-                 parts: [{ text: msg.text }],
+                 parts: [{ text: msg.text }], // Guaranteed non-empty
              }));
+             console.log("Initializing chat session with history:", historyForAI); // Log the history being used
              chatSession.current = model.startChat({
-                 history: historyForAI, // Start with current messages
+                 history: historyForAI, // Start with filtered messages
                  generationConfig: { maxOutputTokens: 1000 },
              });
         }

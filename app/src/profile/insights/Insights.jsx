@@ -180,7 +180,7 @@ function Insights() {
              </Typography>
         ) : !isSavingSingle && editingQuestion === null && (
              <Typography variant="body2" color="text.secondary" sx={{ my: 2 }}>
-                 Your responses are saved. Click the pencil icon <EditOutlinedIcon fontSize="inherit" sx={{ verticalAlign: 'bottom' }}/> next to an answer to edit it.
+                 Your responses are saved. Click an answer chip below to edit it.
              </Typography>
         )}
 
@@ -245,27 +245,25 @@ function Insights() {
                           size="small"
                           color={item.answer ? "primary" : "default"}
                           variant="filled"
+                          onClick={editingQuestion === null && !isSavingSingle ? () => handleStartEdit(item.question, item.answer) : undefined} // Make chip clickable
+                          disabled={editingQuestion !== null || isSavingSingle} // Visually disable if another is editing
                           sx={{
                               mt: 0.5,
                               borderRadius: 16,
-                              // REMOVED flexGrow: 1
-                              mr: 1, // Keep margin for spacing from potential icon button
+                              mr: 1, // Keep some margin
                               justifyContent: 'flex-start',
-                              maxWidth: 'calc(100% - 40px)', // Prevent chip overlapping icon button
-                              '& .MuiChip-label': { overflow: 'visible', whiteSpace: 'normal' } // Allow wrapping
+                              maxWidth: '100%', // Allow chip to take full width if needed
+                              '& .MuiChip-label': { overflow: 'visible', whiteSpace: 'normal' }, // Allow wrapping
+                              // Add pointer cursor only when clickable
+                              cursor: editingQuestion === null && !isSavingSingle ? 'pointer' : 'default',
+                              '&:hover': {
+                                  // Add subtle hover effect only when clickable
+                                  backgroundColor: editingQuestion === null && !isSavingSingle && item.answer ? 'primary.dark' : undefined, // Darken primary chip on hover
+                                  filter: editingQuestion === null && !isSavingSingle && !item.answer ? 'brightness(0.95)' : undefined // Slightly darken default chip
+                              }
                           }}
                        />
-                        {/* Edit button positioned absolutely relative to Paper */}
-                        <Tooltip title="Edit Answer">
-                            <IconButton
-                                onClick={() => handleStartEdit(item.question, item.answer)}
-                                size="small"
-                                disabled={editingQuestion !== null || isSavingSingle} // Disable if any other item is being edited or saved
-                                sx={{ position: 'absolute', top: 12, right: 12 }} // Adjust positioning slightly
-                            >
-                                <EditOutlinedIcon fontSize="small" />
-                            </IconButton>
-                        </Tooltip>
+                        {/* Edit icon removed */}
                    </Box>
                 )}
               </Paper>

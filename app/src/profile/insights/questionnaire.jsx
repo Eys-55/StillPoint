@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { auth, firestore } from '../../firebase.jsx';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { questions } from '../../meta/questions.js';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
-  Card, // No longer used directly, but kept for potential future use
   CardContent,
   Typography,
   Button,
@@ -20,22 +19,37 @@ import {
   Fade,
   Paper,
   Stack,
+  Alert, // Added for saving status/errors
 } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'; // Icon for Back button
+import SaveIcon from '@mui/icons-material/Save'; // Icon for saving status
+
+const SAVE_DEBOUNCE_MS = 1500; // 1.5 seconds debounce time
 
 function Questionnaire() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState(Array(questions.length).fill(null)); // Initialize with nulls
+  const [answers, setAnswers] = useState([]); // Initialize empty, will be populated
   const [loading, setLoading] = useState(true);
   const [isEditable, setIsEditable] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [savingInteractive, setSavingInteractive] = useState(false); // For initial completion save
   const [fade, setFade] = useState(true); // Start visible for initial load
+
+  // State for auto-save in edit mode
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState(false); // To show temporary success message
+  const saveTimeoutId = useRef(null); // Ref to store timeout ID for debouncing
+  const hasUnsavedChanges = useRef(false); // Ref to track if changes were made since last save
+
   const user = auth.currentUser;
   const navigate = useNavigate();
 
+  // --- Data Fetching ---
   useEffect(() => {
     async function checkQuestionnaire() {
       setLoading(true);
+      setSaveError('');
       const initializeEmptyAnswers = () => questions.map(q => ({ question: q.question, answer: "" }));
 
       if (user) {
@@ -43,8 +57,8 @@ function Questionnaire() {
         try {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists() && docSnap.data().answers) {
-            const storedAnswers = docSnap.data().answers || [];
-            // Ensure storedAnswers is actually an array before mapping
+            const data = docSnap.data();
+            const storedAnswers = data.answers || [];
             if (Array.isArray(storedAnswers)) {
                 const storedAnswersMap = new Map(storedAnswers.map(a => [a.question, a.answer]));
                 const fullAnswers = questions.map(q => ({
@@ -53,30 +67,107 @@ function Questionnaire() {
                 }));
                 setAnswers(fullAnswers);
             } else {
-                 // Handle case where 'answers' field exists but is not an array
                  console.warn("Stored 'answers' is not an array:", storedAnswers);
                  setAnswers(initializeEmptyAnswers());
             }
             setIsEditable(true); // Already completed, enter edit mode
           } else {
-            // No document or no 'answers' field, start fresh
             setAnswers(initializeEmptyAnswers());
-            setIsEditable(false);
+            setIsEditable(false); // Start fresh interactive mode
           }
         } catch (error) {
           console.error("Error fetching questionnaire:", error);
+          setSaveError("Failed to load questionnaire data.");
           setAnswers(initializeEmptyAnswers());
           setIsEditable(false);
         }
       } else {
         console.warn("User not logged in, cannot fetch questionnaire.");
+        setSaveError("You must be logged in to view or answer the questionnaire.");
         setAnswers(initializeEmptyAnswers());
         setIsEditable(false);
       }
       setLoading(false);
+      hasUnsavedChanges.current = false; // Reset unsaved changes flag on load
     }
     checkQuestionnaire();
   }, [user]); // Rerun if user changes
+
+  // --- Auto-Save Logic (Edit Mode) ---
+  const saveChanges = useCallback(async () => {
+    if (!user || !hasUnsavedChanges.current) {
+        // console.log("Save skipped: No user or no unsaved changes.");
+        return; // Don't save if no user or no changes detected
+    }
+
+    // console.log("Attempting to save changes...");
+    setIsSavingEdit(true);
+    setSaveError('');
+    setSaveSuccess(false);
+    const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
+
+    try {
+      // Filter out any potentially invalid entries before saving
+      const finalAnswers = answers.filter(a => a && a.question && typeof a.answer === 'string');
+      const dataToSave = {
+          answers: finalAnswers,
+          updatedAt: new Date().toISOString() // Always update timestamp
+      };
+      // Preserve completedAt if it exists
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists() && docSnap.data().completedAt) {
+          dataToSave.completedAt = docSnap.data().completedAt;
+      } else if (!docSnap.exists() || !docSnap.data().completedAt) {
+          // If completing for the first time via edit mode (unlikely but possible)
+          dataToSave.completedAt = new Date().toISOString();
+      }
+
+      await setDoc(docRef, dataToSave, { merge: true });
+      // console.log("Changes saved successfully.");
+      hasUnsavedChanges.current = false; // Reset flag after successful save
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000); // Show success message briefly
+
+    } catch (err) {
+      console.error("Error auto-saving questionnaire:", err);
+      setSaveError("Failed to save changes. Please try again later.");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  }, [user, answers]); // Dependency array includes user and answers
+
+  // Effect for debounced saving in edit mode
+  useEffect(() => {
+    if (isEditable && hasUnsavedChanges.current) {
+      // Clear existing timer if there is one
+      if (saveTimeoutId.current) {
+        clearTimeout(saveTimeoutId.current);
+      }
+      // Set a new timer
+      saveTimeoutId.current = setTimeout(() => {
+        saveChanges();
+      }, SAVE_DEBOUNCE_MS);
+    }
+
+    // Cleanup function to clear timeout on unmount or when isEditable changes
+    return () => {
+      if (saveTimeoutId.current) {
+        clearTimeout(saveTimeoutId.current);
+      }
+    };
+  }, [answers, isEditable, saveChanges]); // Rerun when answers or edit mode changes
+
+  // Effect to save changes when component unmounts (if in edit mode and changes exist)
+  useEffect(() => {
+    return () => {
+      if (isEditable && hasUnsavedChanges.current) {
+        // console.log("Component unmounting, saving pending changes...");
+        saveChanges(); // Save immediately on unmount
+      }
+    };
+  }, [isEditable, saveChanges]); // Depends on edit mode and the save function itself
+
+  // --- Handlers ---
 
   // Effect for fade transition (only in interactive mode)
   useEffect(() => {
@@ -95,76 +186,59 @@ function Questionnaire() {
   };
 
   // Handle answer selection in interactive mode
-  const handleAnswer = async (option) => {
+  const handleAnswerInteractive = async (option) => {
     const newAnswer = { question: questions[currentQuestionIndex].question, answer: option };
     const updatedAnswers = [...answers];
     updatedAnswers[currentQuestionIndex] = newAnswer;
     setAnswers(updatedAnswers); // Update local state
 
     if (currentQuestionIndex < questions.length - 1) {
-      // Move to the next question with transition
       transitionQuestion(() => {
         setCurrentQuestionIndex(currentQuestionIndex + 1);
       });
     } else {
       // Last question: Save all answers to Firestore
-      setSaving(true);
+      setSavingInteractive(true);
       if (user) {
           const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
           try {
-            // Ensure only valid answers are saved (basic check)
             const finalAnswers = updatedAnswers.filter(a => a && typeof a.question === 'string' && typeof a.answer === 'string');
-            await setDoc(docRef, { answers: finalAnswers, completedAt: new Date().toISOString() }, { merge: true });
+            await setDoc(docRef, {
+                answers: finalAnswers,
+                completedAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString() // Also set updatedAt on completion
+            }, { merge: true });
             navigate('/profile'); // Navigate to profile page on success
-            // No need to setSaving(false) due to navigation
           } catch (err) {
             console.error("Error saving questionnaire:", err);
-            alert("Failed to save responses. Please try again."); // User feedback
-            setSaving(false); // Reset saving state on error
+            setSaveError("Failed to save responses. Please try again.");
+            setSavingInteractive(false);
           }
       } else {
           console.error("Cannot save questionnaire: User not logged in.");
-          alert("You must be logged in to save responses.");
-          setSaving(false);
+          setSaveError("You must be logged in to save responses.");
+          setSavingInteractive(false);
       }
     }
   };
 
   // Handle option selection in edit mode (using RadioGroup)
-  const handleSelectOption = (qIndex, option) => {
+  const handleSelectOptionEdit = (qIndex, option) => {
     const updatedAnswers = [...answers];
-    // Ensure the answer object structure is correct
     if (!updatedAnswers[qIndex] || typeof updatedAnswers[qIndex] !== 'object') {
       updatedAnswers[qIndex] = { question: questions[qIndex].question, answer: option };
     } else {
-      updatedAnswers[qIndex].answer = option;
+      // Only update if the answer actually changed
+      if (updatedAnswers[qIndex].answer !== option) {
+          updatedAnswers[qIndex].answer = option;
+          hasUnsavedChanges.current = true; // Mark changes as unsaved
+          setAnswers(updatedAnswers); // Update local state -> triggers debounce effect
+          setSaveSuccess(false); // Hide success message on new change
+          setSaveError(''); // Clear previous errors on new change
+      }
     }
-    setAnswers(updatedAnswers); // Update local state
   };
 
-  // Handle saving changes in edit mode
-  const handleSaveEdit = async (e) => {
-    e.preventDefault(); // Prevent default form submission
-    setSaving(true);
-    if (user) {
-        const docRef = doc(firestore, 'users', user.uid, 'questionnaire', 'responses');
-        try {
-            // Filter out any potentially invalid entries before saving
-            const finalAnswers = answers.filter(a => a && a.question && typeof a.answer === 'string'); // Check answer type too
-            await setDoc(docRef, { answers: finalAnswers, completedAt: new Date().toISOString() }, { merge: true });
-            navigate('/profile'); // Navigate back to profile on success
-            // No need to setSaving(false) due to navigation
-        } catch (err) {
-            console.error("Error updating questionnaire:", err);
-            alert("Failed to save changes. Please try again."); // User feedback
-            setSaving(false); // Reset saving state on error
-        }
-    } else {
-        console.error("Cannot save questionnaire updates: User not logged in.");
-        alert("You must be logged in to save changes.");
-        setSaving(false);
-    }
-  };
 
   // ----- Render Logic -----
 
@@ -182,69 +256,67 @@ function Questionnaire() {
   if (isEditable) {
     return (
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-        {/* Use theme's default Paper border radius (16px) */}
         <Paper elevation={3} sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
-          <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'medium', mb: 3 }}>
-            Review Your Responses
-          </Typography>
-          <form onSubmit={handleSaveEdit}>
-            <Stack spacing={4}>
-              {questions.map((q, idx) => {
-                // Find the corresponding answer object, default to empty string if not found
-                const currentAnswerObj = answers.find(a => a?.question === q.question);
-                const currentAnswer = currentAnswerObj ? currentAnswerObj.answer : "";
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h4" component="h1" sx={{ fontWeight: 'medium' }}>
+              Review Your Responses
+            </Typography>
+            {/* Saving Status Indicator */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, height: '24px' /* Match icon size */ }}>
+              {isSavingEdit && <CircularProgress size={20} color="primary" />}
+              {isSavingEdit && <Typography variant="body2" color="text.secondary">Saving...</Typography>}
+              {saveSuccess && !isSavingEdit && <SaveIcon color="success" fontSize="small" />}
+              {saveSuccess && !isSavingEdit && <Typography variant="body2" color="success.main">Saved</Typography>}
+            </Box>
+          </Stack>
 
-                return (
-                  <FormControl component="fieldset" key={idx} fullWidth>
-                    <FormLabel component="legend" sx={{ mb: 1.5 }}>
-                      <Typography variant="h6" fontWeight="regular">
-                        {idx + 1}. {q.question}
-                      </Typography>
-                    </FormLabel>
-                    <RadioGroup
-                      aria-label={q.question}
-                      name={`question-${idx}`}
-                      value={currentAnswer} // Use the found answer value
-                      onChange={(e) => handleSelectOption(idx, e.target.value)} // Pass index to identify question
-                    >
-                      {q.options.map((option, optionIdx) => (
-                        <FormControlLabel
-                          key={optionIdx}
-                          value={option}
-                          control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 24 } }} />}
-                          label={<Typography variant="body1">{option}</Typography>}
-                          sx={{ mb: 0.5, ml: 1 }}
-                        />
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
-                );
-              })}
-            </Stack>
-            <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-              <Button
-                variant="outlined"
-                onClick={() => navigate('/profile')} // Navigate back to profile on cancel
-                disabled={saving}
-                color="secondary"
-                // Use theme default (8px) or specify pill shape
-                sx={{ borderRadius: '50px', px: 3 }} // Make Cancel button pill-shaped
-              >
-                Cancel
-              </Button>
-              {/* Added missing opening <Button tag */}
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={saving}
-                startIcon={saving ? <CircularProgress size={20} color="inherit" /> : null}
-                // Use theme default (8px) or specify pill shape
-                sx={{ borderRadius: '50px', px: 3 }} // Make Save button pill-shaped
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </Box> {/* Closing Box tag was missing */}
-          </form>
+          {saveError && <Alert severity="error" sx={{ mb: 2 }}>{saveError}</Alert>}
+
+          {/* No <form> tag needed */}
+          <Stack spacing={4}>
+            {questions.map((q, idx) => {
+              const currentAnswerObj = answers.find(a => a?.question === q.question);
+              const currentAnswer = currentAnswerObj ? currentAnswerObj.answer : "";
+
+              return (
+                <FormControl component="fieldset" key={idx} fullWidth disabled={isSavingEdit}>
+                  <FormLabel component="legend" sx={{ mb: 1.5 }}>
+                    <Typography variant="h6" fontWeight="regular">
+                      {idx + 1}. {q.question}
+                    </Typography>
+                  </FormLabel>
+                  <RadioGroup
+                    aria-label={q.question}
+                    name={`question-${idx}`}
+                    value={currentAnswer}
+                    onChange={(e) => handleSelectOptionEdit(idx, e.target.value)}
+                  >
+                    {q.options.map((option, optionIdx) => (
+                      <FormControlLabel
+                        key={optionIdx}
+                        value={option}
+                        control={<Radio sx={{ '& .MuiSvgIcon-root': { fontSize: 24 } }} />}
+                        label={<Typography variant="body1">{option}</Typography>}
+                        sx={{ mb: 0.5, ml: 1 }}
+                      />
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+              );
+            })}
+          </Stack>
+          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-start' }}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIcon />}
+              onClick={() => navigate('/profile')} // Navigate back to profile
+              disabled={isSavingEdit} // Disable while saving
+              // Use theme default (8px) or specify pill shape
+              sx={{ borderRadius: '50px', px: 3 }}
+            >
+              Back to Profile
+            </Button>
+          </Box>
         </Paper>
       </Container>
     );
@@ -252,46 +324,43 @@ function Questionnaire() {
 
   // --- Interactive Mode UI ---
   const currentQ = questions[currentQuestionIndex];
-  // Progress based on NEXT question index (0/N, 1/N, ..., N/N)
   const progress = ((currentQuestionIndex) / questions.length) * 100;
 
   return (
     <Container maxWidth="sm" sx={{ mt: { xs: 3, sm: 5 }, mb: 4 }}>
      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
          <Box sx={{ width: '100%', mr: 1 }}>
-          {/* Use standard medium border radius */}
           <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: '8px' }}/>
          </Box>
-         <Box sx={{ minWidth: 55 }}> {/* Adjusted width */}
-           {/* Show N/Total */}
+         <Box sx={{ minWidth: 55 }}>
            <Typography variant="body2" color="text.secondary">{`${currentQuestionIndex + 1}/${questions.length}`}</Typography>
          </Box>
        </Box>
        {/* Question Card */}
        <Fade in={fade} timeout={300}>
-        {/* Use theme's default Paper border radius (16px) */}
         <Paper elevation={3}>
            <CardContent sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
              <Typography variant="h5" component="div" sx={{ mb: 4, fontWeight: 'medium', textAlign: 'center' }}>
                {currentQ.question}
-             </Typography> {/* Closing Typography tag was missing */}
+             </Typography>
             <Stack spacing={2}>
               {currentQ.options.map((option, idx) => (
                 <Button
                   key={idx}
                   variant="outlined"
                   fullWidth
-                  onClick={() => handleAnswer(option)}
+                  onClick={() => handleAnswerInteractive(option)}
+                  disabled={savingInteractive} // Disable buttons while saving last answer
                   sx={{
                      justifyContent: 'flex-start',
                      textTransform: 'none',
                      py: 1.5,
                      px: 2,
-                    borderRadius: '8px', // Use standard medium radius
+                    borderRadius: '8px',
                      borderColor: 'grey.400',
                      '&:hover': {
                        backgroundColor: 'action.hover'
-                     } // Closing brace was missing
+                     }
                    }}
                 >
                   <CheckCircleOutlineIcon sx={{ mr: 1.5, color: 'grey.500' }} />
@@ -303,12 +372,16 @@ function Questionnaire() {
         </Paper>
       </Fade>
 
-      {/* Saving Indicator (for last question submission) */}
-      {saving && (
+      {/* Saving Indicator (for last question submission in interactive mode) */}
+      {savingInteractive && (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, gap: 1 }}>
           <CircularProgress size={24} />
           <Typography color="text.secondary">Saving your responses...</Typography>
         </Box>
+      )}
+      {/* Error display for interactive mode save */}
+      {saveError && !isEditable && (
+          <Alert severity="error" sx={{ mt: 2 }}>{saveError}</Alert>
       )}
     </Container>
   );
